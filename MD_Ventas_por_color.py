@@ -8,40 +8,22 @@ import io
 from datetime import datetime
 from excel_exporter import to_excel
 
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import numpy as np
+import GraficaBarraDobleColor as GBD
+import io
+from datetime import datetime
+from excel_exporter import to_excel
+import sidebar_filters # Importar el nuevo módulo
+
 def main(DataF):
 
-    st.sidebar.header("Filtros Dinámicos")
-
-    # Definición de Filtros de un solo Valor Seleccionable___________________________________________________________________________________________________________
-    filtros_selectbox = [
-        ("Cliente", "Ini_Cliente",False),
-        ("Tipo Programa", "Tipo_Programa",True),
-        ("Marca", "Marca",False)
-    ]
-    # Definición de Filtros de múltiples Valores Seleccionables___________________________________________________________________________________________________________
-    filtros_multiselect = [
-        ("Fit Estilo", "Fit_Estilo",True),
-        ("Semanas", "Semanas",True)
-    ]
-
-    df_filtrado = DataF.copy() # Copia de DataFrame original para aplicar filtros
-
-    # Bucle para Filtros de Selección ÚNICA (selectbox)___________________________________________________________________________________________________________
-    for titulo, columna, orden in filtros_selectbox:
-        opciones = ['Todos'] + sorted(list(df_filtrado[columna].unique()), reverse=orden)
-        seleccion = st.sidebar.selectbox(titulo, opciones)
-        if seleccion != 'Todos':
-            df_filtrado = df_filtrado[df_filtrado[columna] == seleccion]
-
-    # Bucle para Filtros de Selección MÚLTIPLE (multiselect)___________________________________________________________________________________________________________
-    for titulo, columna, orden in filtros_multiselect:
-        opciones = sorted(list(df_filtrado[columna].unique()), reverse=orden)
-        selecciones = st.sidebar.multiselect(titulo, opciones)
-        if selecciones:
-            df_filtrado = df_filtrado[df_filtrado[columna].isin(selecciones)]
-
-    # Mostramos el DataFrame filtrado___________________________________________________________________________________________________________
-    # st.dataframe(df_filtrado, width='stretch', height=500)
+    # Renderizar y aplicar filtros
+    selections = sidebar_filters.get_filter_selections(DataF)
+    df_filtrado = sidebar_filters.apply_filters(DataF, selections)
 
     # Inicio de los cálculos de participación para el gráfico___________________________________________________________________________________________________________
     

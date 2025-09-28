@@ -4,36 +4,21 @@ import GraficaBarraDobleTalla as GBDT
 from excel_exporter import to_excel
 from datetime import datetime
 from pandas.api.types import CategoricalDtype
+import config # Importar el nuevo módulo de configuración
+
+import streamlit as st
+import pandas as pd
+import GraficaBarraDobleTalla as GBDT
+from excel_exporter import to_excel
+from datetime import datetime
+from pandas.api.types import CategoricalDtype
+import config
+import sidebar_filters # Importar el nuevo módulo
 
 def main(DataF):
-    st.sidebar.header("Filtros Dinámicos")
-
-    # --- Sección de Filtros --- #
-    filtros_selectbox = [
-        ("Cliente", "Ini_Cliente", False),
-        ("Tipo Programa", "Tipo_Programa", True),
-        ("Marca", "Marca", False)
-    ]
-    filtros_multiselect = [
-        ("Fit Estilo", "Fit_Estilo", True),
-        ("Semanas", "Semanas", True)
-    ]
-
-    df_filtroTL = DataF.copy()
-
-        # Bucle para Filtros de Selección ÚNICA (selectbox)___________________________________________________________________________________________________________
-    for titulo, columna, orden in filtros_selectbox:
-        opciones = ['Todos'] + sorted(list(df_filtroTL[columna].unique()), reverse=orden)
-        seleccion = st.sidebar.selectbox(titulo, opciones)
-        if seleccion != 'Todos':
-            df_filtroTL = df_filtroTL[df_filtroTL[columna] == seleccion]
-
-    # Bucle para Filtros de Selección MÚLTIPLE (multiselect)___________________________________________________________________________________________________________
-    for titulo, columna, orden in filtros_multiselect:
-        opciones = sorted(list(df_filtroTL[columna].unique()), reverse=orden)
-        selecciones = st.sidebar.multiselect(titulo, opciones)
-        if selecciones:
-            df_filtroTL = df_filtroTL[df_filtroTL[columna].isin(selecciones)]
+    # Renderizar y aplicar filtros
+    selections = sidebar_filters.get_filter_selections(DataF)
+    df_filtroTL = sidebar_filters.apply_filters(DataF, selections)
 
     # --- Lógica de Filtro de Participación --- #
     # Se calcula la participación total por talla sobre los datos ya filtrados por el usuario
@@ -59,16 +44,8 @@ def main(DataF):
 
     # --- Lógica de Ordenamiento Personalizado para Tallas ---
     if not df_filtroTL.empty:
-        # Define el orden de tallas personalizado completo.
-        orden_tallas_personalizado = [
-            'XXL','XL','L','M','S','SX','XXS','50','49','48','47','46','45','44',
-            '43','42','41','40','39','38','37','36','35','34','33','32','31','30',
-            '29','28','27','26','25','24','23','22','21','20','19','18','17','16',
-            '15','14','13','12','11','10','9','8','7','6','5','4','3','2','1','20M',
-            '19M','18M','17M','16M','15M','14M','13M','12M','11M','10M','9M','8M',
-            '7M','6M','5M','4M','3M','2M','1M','0M','U'
-        ]
-        orden_tallas_personalizado = orden_tallas_personalizado[::-1]
+        # Usa la lista de orden de tallas desde el archivo de configuración
+        orden_tallas_personalizado = config.ORDEN_TALLAS_PERSONALIZADO[::-1]
 
         # Convierte la columna de tallas a string para una comparación consistente.
         df_filtroTL['Talla'] = df_filtroTL['Talla'].astype(str)

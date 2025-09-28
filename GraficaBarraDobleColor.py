@@ -14,7 +14,7 @@ def crear_grafica_barra_doble_horizontal(
     color_hex_col: str = None, # Parámetro de color ahora es opcional
     titulo_eje_x: str = "Valor",
     titulo_eje_y: str = "Categoría",
-    height: int = 1000
+    height: int = 800
 ):
     """
     Crea una gráfica de barras dobles horizontal personalizable y reutilizable.

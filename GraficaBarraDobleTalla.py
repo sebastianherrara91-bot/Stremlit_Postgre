@@ -13,7 +13,7 @@ def crear_grafica_barra_doble_horizontal(
     nombre_barra2: str,
     titulo_eje_x: str = "",
     titulo_eje_y: str = "",
-    height: int = 1000
+    height: int = 800
 ):
     """ 
     Crea una gráfica de barras dobles horizontal con un diseño minimalista para Tallas.
