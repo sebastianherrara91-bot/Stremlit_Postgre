@@ -12,6 +12,7 @@ import StreamlitElements as SE
 st.set_page_config(
     page_title="Ventas_Inco",
     page_icon=":bar_chart:",
+    #layout="centered"
     layout="wide" # layout="wide" para que se adapte al ancho de la pantalla
     )
 
@@ -49,23 +50,35 @@ def main():
 
     st.sidebar.header("Menu")
     menu = st.sidebar.selectbox("Seleccionar Detalle", ["Ventas por Tienda", "Ventas por color", "Ventas por talla", "Ventas por Arte"])
-    selec= menu
+    selec = menu
 
-    dfVS1 = GSQL.get_dataframe("Ventas_StockUltsem.sql")
-    dfVS8 = GSQL.get_dataframe("Ventas_Stock_8Sem.sql")
-    
-    if not dfVS1.empty and not dfVS8.empty:
-        #st.dataframe(dfv, use_container_width=True, height=500)
-        if selec == "Ventas por Tienda":
-            VPTI.main(dfVS8)
-        elif selec == "Ventas por color": 
-            VPC.main(dfVS1.groupby(['Ini_Cliente', 'Tipo_Programa','C_L','Local','Ciudad','Marca', 'Semanas', 'Fit_Estilo', 'COLOR', 'C_Color','Color_Hexa'],dropna=False).agg({'Cant_Venta': 'sum','Cant_Stock': 'sum'}).reset_index())
-        elif selec == "Ventas por talla": 
-            VPT.main(dfVS1.groupby(['Ini_Cliente', 'Tipo_Programa','C_L','Local','Ciudad','Marca', 'Semanas', 'Fit_Estilo', 'Talla'],dropna=False).agg({'Cant_Venta': 'sum','Cant_Stock': 'sum'}).reset_index())
-        elif selec == "Ventas por Arte": 
-            SE.StreamElement()            
-    else:
-        st.warning("No se pudieron cargar los datos")
+    if selec == "Ventas por Tienda":
+        # Llama a la nueva consulta optimizada para tiendas
+        df_tienda = GSQL.get_dataframe("Ventas_por_tienda.sql")
+        if not df_tienda.empty:
+            VPTI.main(df_tienda)
+        else:
+            st.warning("No se pudieron cargar los datos para el dashboard de Tiendas.")
+
+    elif selec == "Ventas por color":
+        # Llama a la nueva consulta optimizada para color, sin groupby en python
+        df_color = GSQL.get_dataframe("Ventas_por_color.sql")
+        if not df_color.empty:
+            VPC.main(df_color)
+        else:
+            st.warning("No se pudieron cargar los datos para el dashboard de Color.")
+
+    elif selec == "Ventas por talla":
+        # Llama a la nueva consulta optimizada para talla, sin groupby en python
+        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql")
+        if not df_talla.empty:
+            VPT.main(df_talla)
+        else:
+            st.warning("No se pudieron cargar los datos para el dashboard de Talla.")
+
+    elif selec == "Ventas por Arte":
+        # SE.StreamElement() # Esta línea parece estar incompleta o es un placeholder
+        st.info("El dashboard 'Ventas por Arte' está en construcción.")
     
 
     #st.dataframe(dfv, width='stretch', height=500)

@@ -121,7 +121,7 @@ def main(DataF):
                 st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': False, 'displayModeBar': False})
 
     st.write("Datos filtrados por talla")
-    st.dataframe(df_filtroTL.head(10))
+    st.dataframe(df_filtroTL.head(10), width='stretch')
     #df_xlsx = to_excel(df_filtroTL)
 
 """     st.download_button(

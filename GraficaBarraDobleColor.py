@@ -33,7 +33,6 @@ def crear_grafica_barra_doble_horizontal(
         titulo_eje_x (str, optional): Título para el eje X. Defaults to "Valor".
         titulo_eje_y (str, optional): Título para el eje Y. Defaults to "Categoría".
         height (int, optional): Altura del gráfico en píxeles. Defaults to 1000.
-
     Returns:
         go.Figure: Objeto Figure de Plotly con el gráfico generado.
     """
