@@ -9,10 +9,12 @@ import MD_Ventas_por_talla as VPT
 import MD_Ventas_por_Tienda as VPTI
 import MD_Resumen_Tienda as RT  # <-- 1. Importar el nuevo módulo
 import StreamlitElements as SE
+import PIL.Image as Image
 
+logo = Image.open("INCO.png")
 st.set_page_config(
     page_title="Ventas_Inco",
-    page_icon=":bar_chart:",
+    page_icon=logo,
     layout="wide"
 )
 
@@ -63,15 +65,15 @@ def main():
         else:
             st.warning("No se pudieron cargar los datos para el dashboard de Tiendas.")
 
-    elif selec == "Ventas por color":
-        df_color = GSQL.get_dataframe("Ventas_por_Color.sql")
+    elif selec == "Ventas por Color":
+        df_color = GSQL.get_dataframe("Ventas_por_color.sql")
         if not df_color.empty:
             VPC.main(df_color)
         else:
             st.warning("No se pudieron cargar los datos para el dashboard de Color.")
 
-    elif selec == "Ventas por talla":
-        df_talla = GSQL.get_dataframe("Ventas_por_Talla.sql")
+    elif selec == "Ventas por Talla":
+        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql")
         if not df_talla.empty:
             VPT.main(df_talla)
         else:
