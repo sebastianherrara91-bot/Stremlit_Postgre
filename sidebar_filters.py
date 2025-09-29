@@ -4,7 +4,7 @@ def get_filter_selections(df):
     """
     Renderiza los filtros de la barra lateral y devuelve las selecciones del usuario.
     """
-    st.sidebar.header("Filtros Dinámicos")
+    #st.sidebar.header("Filtros Dinámicos")
     selections = {}
 
     # Configuración de filtros
@@ -19,12 +19,17 @@ def get_filter_selections(df):
     ]
 
     # Renderizar y capturar selecciones
+    st.sidebar.divider()
+    st.sidebar.subheader("Filtros")
     for titulo, columna, orden in filtros_selectbox:
-        opciones = ['Todos'] + sorted(list(df[columna].unique()), reverse=orden)
-        seleccion = st.sidebar.selectbox(titulo, opciones, key=f"sb_{columna}")
-        if seleccion != 'Todos':
-            selections[columna] = seleccion
+        with st.sidebar.popover(titulo, use_container_width=True):
+            opciones = ['Todos'] + sorted(list(df[columna].unique()), reverse=orden)
+            seleccion = st.radio("titulo", opciones, key=f"sb_{columna}",label_visibility="collapsed")
+            if seleccion != 'Todos':
+                selections[columna] = seleccion
 
+    #st.sidebar.subheader("Filtros Adicionales")
+    st.sidebar.divider()
     for titulo, columna, orden in filtros_multiselect:
         opciones = sorted(list(df[columna].unique()), reverse=orden)
         selecciones_multi = st.sidebar.multiselect(titulo, opciones, key=f"ms_{columna}")

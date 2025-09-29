@@ -1,25 +1,3 @@
-
-import streamlit as st
-import pandas as pd
-import numpy as np
-import GraficaBarraDobleColor as GBD
-import GraficaBarraDobleTalla as GBDT
-from pandas.api.types import CategoricalDtype
-import config # Importar el nuevo módulo de configuración
-
-# Re-using styling functions from MD_Ventas_por_Tienda
-def resaltar_fila_max_semana(fila,semmax):
-    if fila['Semanas'] == semmax:
-        return ['background-color: #D4EDDA'] * len(fila)
-    else:
-        return [''] * len(fila)
-
-def highlight_min_non_zero(col, color):
-    non_zero_vals = col.replace(0, np.nan)
-    min_val = non_zero_vals.min()
-    return [f'background-color: {color}' if v == min_val else '' for v in col]
-
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -42,24 +20,40 @@ def highlight_min_non_zero(col, color):
     return [f'background-color: {color}' if v == min_val else '' for v in col]
 
 def main(df_tienda, df_color, df_talla):
-    st.header("Resumen por Tienda")
 
     # --- 1. FILTRO PRINCIPAL POR TIENDA ---
-    lista_locales = sorted(df_tienda['Local'].unique().tolist())
-    tienda_seleccionada = st.selectbox(
-        "Seleccione una Tienda para analizar",
-        lista_locales,
-        index=0
-    )
+    # Preparar los datos para el filtro de tienda
+    tiendas_df = df_tienda[['C_L', 'Ciudad', 'Local']].drop_duplicates().sort_values(by=['Ciudad', 'Local'])
+    
+    # Hacer C_L invisible en el display
+    tiendas_df['display'] = tiendas_df['Ciudad'].str[5:] + '-' + tiendas_df['Local']
+    
+    # Crear mapa de display a C_L para el filtrado
+    mapa_display_cl = pd.Series(tiendas_df.C_L.values, index=tiendas_df.display).to_dict()
+    lista_tiendas_display = tiendas_df['display'].tolist()
 
-    if not tienda_seleccionada:
+    # Crear el popover con el radio button para seleccionar la tienda
+    with st.popover("Seleccione una Tienda para analizar"):
+        tienda_display_seleccionada = st.radio(
+            "Tiendas",
+            lista_tiendas_display,
+            index=0,
+            label_visibility="collapsed"
+        )
+    
+    st.header(f"Resumen: {tienda_display_seleccionada}")
+
+    if not tienda_display_seleccionada:
         st.warning("Por favor, seleccione una tienda.")
         return
 
-    # --- 2. FILTRAR DATAFRAMES POR TIENDA SELECCIONADA ---
-    df_tienda_local = df_tienda[df_tienda['Local'] == tienda_seleccionada].copy()
-    df_color_local = df_color[df_color['Local'] == tienda_seleccionada].copy()
-    df_talla_local = df_talla[df_talla['Local'] == tienda_seleccionada].copy()
+    # Obtener el C_L de la tienda seleccionada usando el mapa
+    cl_seleccionado = mapa_display_cl[tienda_display_seleccionada]
+
+    # --- 2. FILTRAR DATAFRAMES POR TIENDA SELECCIONADA (usando C_L) ---
+    df_tienda_local = df_tienda[df_tienda['C_L'] == cl_seleccionado].copy()
+    df_color_local = df_color[df_color['C_L'] == cl_seleccionado].copy()
+    df_talla_local = df_talla[df_talla['C_L'] == cl_seleccionado].copy()
 
     # --- 3. RENDERIZAR Y APLICAR FILTROS DEL SIDEBAR ---
     selections = sidebar_filters.get_filter_selections(df_tienda_local)

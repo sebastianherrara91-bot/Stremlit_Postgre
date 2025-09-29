@@ -42,8 +42,8 @@ st.markdown("""
 def main():
     st.sidebar.header("Menu")
     # 2. Añadir la nueva opción al menú
-    menu_options = ["Resumen por Tienda", "Ventas por Tienda", "Ventas por color", "Ventas por talla", "Ventas por Arte"]
-    selec = st.sidebar.selectbox("Seleccionar Detalle", menu_options)
+    menu_options = ["Resumen por Tienda", "Ventas por Tienda", "Ventas por Color", "Ventas por Talla", "Ventas por Arte"]
+    selec = st.sidebar.selectbox("Seleccionar Detalle", menu_options,label_visibility="collapsed")
 
     # 3. Añadir la lógica para el nuevo dashboard
     if selec == "Resumen por Tienda":
@@ -57,21 +57,21 @@ def main():
             st.warning("No se pudieron cargar todos los datos necesarios para el Resumen por Tienda.")
 
     elif selec == "Ventas por Tienda":
-        df_tienda = GSQL.get_dataframe("Ventas_por_tienda.sql")
+        df_tienda = GSQL.get_dataframe("Ventas_por_Tienda.sql")
         if not df_tienda.empty:
             VPTI.main(df_tienda)
         else:
             st.warning("No se pudieron cargar los datos para el dashboard de Tiendas.")
 
     elif selec == "Ventas por color":
-        df_color = GSQL.get_dataframe("Ventas_por_color.sql")
+        df_color = GSQL.get_dataframe("Ventas_por_Color.sql")
         if not df_color.empty:
             VPC.main(df_color)
         else:
             st.warning("No se pudieron cargar los datos para el dashboard de Color.")
 
     elif selec == "Ventas por talla":
-        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql")
+        df_talla = GSQL.get_dataframe("Ventas_por_Talla.sql")
         if not df_talla.empty:
             VPT.main(df_talla)
         else:
