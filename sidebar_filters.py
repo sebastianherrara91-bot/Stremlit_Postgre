@@ -23,7 +23,7 @@ def get_filter_selections(df):
     st.sidebar.subheader("Filtros")
     for titulo, columna, orden in filtros_selectbox:
         with st.sidebar.popover(titulo, use_container_width=True):
-            opciones = ['Todos'] + sorted(list(df[columna].unique()), reverse=orden)
+            opciones = ['Todos'] + sorted(list(map(str, df[columna].unique())), reverse=orden)
             seleccion = st.radio("titulo", opciones, key=f"sb_{columna}",label_visibility="collapsed")
             if seleccion != 'Todos':
                 selections[columna] = seleccion
@@ -31,7 +31,7 @@ def get_filter_selections(df):
     #st.sidebar.subheader("Filtros Adicionales")
     st.sidebar.divider()
     for titulo, columna, orden in filtros_multiselect:
-        opciones = sorted(list(df[columna].unique()), reverse=orden)
+        opciones = sorted(list(map(str, df[columna].unique())), reverse=orden)
         selecciones_multi = st.sidebar.multiselect(titulo, opciones, key=f"ms_{columna}")
         if selecciones_multi:
             selections[columna] = selecciones_multi
