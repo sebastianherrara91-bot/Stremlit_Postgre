@@ -70,16 +70,16 @@ def cargar_consulta_sql(nombre_archivo):
         st.error(f"Error al cargar la consulta SQL: {str(e)}")
         return ""
 
-def obtener_datos_desde_sql(conexion, consulta_sql):
+def obtener_datos_desde_sql(conexion, consulta_sql, params=None):
     """Ejecuta una consulta SQL y devuelve un DataFrame"""
     try:
-        return pd.read_sql(consulta_sql, conexion)
+        return pd.read_sql(consulta_sql, conexion, params=params)
     except Exception as e:
         st.error(f"Error al ejecutar la consulta: {str(e)}")
         return pd.DataFrame()
 
 @st.cache_data(ttl=1800)
-def get_dataframe(consulta_sql):
+def get_dataframe(consulta_sql, params=None):
     try:
         engine = get_connection()
         if engine is None:
@@ -90,10 +90,9 @@ def get_dataframe(consulta_sql):
         if not query:
             return pd.DataFrame()
             
-        df = obtener_datos_desde_sql(engine, query)
+        df = obtener_datos_desde_sql(engine, query, params=params)
         return df
         
     except Exception as e:
         st.error(f"Error al obtener datos: {str(e)}")
         return pd.DataFrame()  # Retorna un DataFrame vacío en caso de error
-

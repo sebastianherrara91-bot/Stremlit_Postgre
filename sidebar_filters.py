@@ -1,5 +1,8 @@
 import streamlit as st
 
+
+
+
 def get_filter_selections(df):
     """
     Renderiza los filtros de la barra lateral y devuelve las selecciones del usuario.

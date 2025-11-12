@@ -1,6 +1,6 @@
--- Query optimizado para el dashboard de Ventas por Color
--- Agrupa los datos directamente en el servidor para minimizar la transferencia de datos.
--- Trae 8 semanas de ventas y 1 semana de stock.
+DECLARE @semanas_stock INT = ?;
+DECLARE @semanas_venta INT = ?;
+
 Select
     syv.Ini_Cliente,
     syv.Tipo_Programa,
@@ -30,7 +30,7 @@ From (
             WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090503' THEN 'YAMP BEBO'
             ELSE ISNULL(MA.NEW_MARCA, EC.MARCA )
         END AS 'Marca',
-        CONCAT(FORMAT(SEM.ANO,'yy'),'/',FORMAT(SEM.N_SEM,'00'),' - ',FORMAT(SEM.DIA_INICIO, 'MM/dd')) as 'Semanas',
+        CONCAT(FORMAT(SEM.ANO,'0'),'/',FORMAT(SEM.N_SEM,'00'),' - ',FORMAT(SEM.DIA_INICIO, 'MM/dd')) as 'Semanas',
         M.FIT AS 'Fit_Estilo',
         CO.COLOR,
         EC.COD_COLOR as 'C_Color',
@@ -44,7 +44,10 @@ From (
     LEFT JOIN [DWH_INCO].[dbo].TIENDAS AS T ON ST.NUM_LOCAL = T.CODIGO
     LEFT JOIN [DWH_INCO].[dbo].MARCA AS MA ON EC.MARCA = MA.MARCA_BD
     LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,ST.FECHA),CAST(ST.FECHA as date)) = SEM.DIA_INICIO
-    WHERE ST.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and st.FECHA between convert(date,DATEADD(day,-(7*(1)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+    LEFT JOIN [DWH_INCO].[dbo].TIPO_PROGRAMA AS TP ON ST.INI_CLIENTE = TP.INI_CLIENTE AND EC.MARCA = TP.MARCA and M.TIPO = TP.TIPO
+
+    WHERE ST.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
+    and st.FECHA between convert(date,DATEADD(day,-(7*(@semanas_stock)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
 
     UNION ALL
 
@@ -62,7 +65,7 @@ From (
             WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090503' THEN 'YAMP BEBO'
             ELSE ISNULL(MA.NEW_MARCA, EC.MARCA )
         END AS 'Marca',
-        CONCAT(FORMAT(SEM.ANO,'yy'),'/',FORMAT(SEM.N_SEM,'00'),' - ',FORMAT(SEM.DIA_INICIO, 'MM/dd')) as 'Semanas',
+        CONCAT(FORMAT(SEM.ANO,'0'),'/',FORMAT(SEM.N_SEM,'00'),' - ',FORMAT(SEM.DIA_INICIO, 'MM/dd')) as 'Semanas',
         M.FIT AS 'Fit_Estilo',
         CO.COLOR,
         EC.COD_COLOR as 'C_Color',
@@ -76,7 +79,11 @@ From (
     LEFT JOIN [DWH_INCO].[dbo].TIENDAS AS T ON VT.NUM_LOCAL = T.CODIGO
     LEFT JOIN [DWH_INCO].[dbo].MARCA AS MA ON EC.MARCA = MA.MARCA_BD
     LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,VT.FECHA),CAST(VT.FECHA as date)) = SEM.DIA_INICIO
-    WHERE VT.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and VT.FECHA between convert(date,DATEADD(day,-(7*(8)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+    LEFT JOIN [DWH_INCO].[dbo].TIPO_PROGRAMA AS TP ON VT.INI_CLIENTE = TP.INI_CLIENTE AND EC.MARCA = TP.MARCA and M.TIPO = TP.TIPO
+
+    WHERE VT.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
+    and VT.FECHA between convert(date,DATEADD(day,-(7*(@semanas_venta)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+
 ) as syv
 GROUP BY
     syv.Ini_Cliente,

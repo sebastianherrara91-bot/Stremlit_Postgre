@@ -49,9 +49,10 @@ def main():
 
     # 3. Añadir la lógica para el nuevo dashboard
     if selec == "Resumen por Tienda":
-        df_tienda = GSQL.get_dataframe("Ventas_por_tienda.sql")
-        df_color = GSQL.get_dataframe("Ventas_por_color.sql")
-        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql")
+        
+        df_tienda = GSQL.get_dataframe("Ventas_por_tienda.sql", params=(8, 8))
+        df_color = GSQL.get_dataframe("Ventas_por_color.sql", params=(1, 8))
+        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql", params=(1, 8))
         
         if not df_tienda.empty and not df_color.empty and not df_talla.empty:
             RT.main(df_tienda, df_color, df_talla)
@@ -59,21 +60,27 @@ def main():
             st.warning("No se pudieron cargar todos los datos necesarios para el Resumen por Tienda.")
 
     elif selec == "Ventas por Tienda":
-        df_tienda = GSQL.get_dataframe("Ventas_por_Tienda.sql")
+        semanas_stock = 8
+        semanas_venta = 8
+        df_tienda = GSQL.get_dataframe("Ventas_por_Tienda.sql", params=(semanas_stock, semanas_venta))
         if not df_tienda.empty:
             VPTI.main(df_tienda)
         else:
             st.warning("No se pudieron cargar los datos para el dashboard de Tiendas.")
 
     elif selec == "Ventas por Color":
-        df_color = GSQL.get_dataframe("Ventas_por_color.sql")
+        semanas_stock = 1
+        semanas_venta = 8
+        df_color = GSQL.get_dataframe("Ventas_por_color.sql", params=(semanas_stock, semanas_venta)) # El orden coincide con DECLARE
         if not df_color.empty:
             VPC.main(df_color)
         else:
             st.warning("No se pudieron cargar los datos para el dashboard de Color.")
 
     elif selec == "Ventas por Talla":
-        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql")
+        semanas_stock = 1
+        semanas_venta = 8
+        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql", params=(semanas_stock, semanas_venta)) # El orden coincide con DECLARE
         if not df_talla.empty:
             VPT.main(df_talla)
         else:
