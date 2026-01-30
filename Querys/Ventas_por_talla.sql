@@ -1,5 +1,6 @@
-DECLARE @semanas_stock INT = ?;
-DECLARE @semanas_venta INT = ?;
+DECLARE @fecha_inicio DATE = ?;
+DECLARE @fecha_fin DATE = ?;
+DECLARE @fecha_inicio_stock DATE = ?; -- El inicio del rango de stock
 
 Select
     syv.Ini_Cliente,
@@ -15,7 +16,7 @@ Select
     SUM(syv.Cant_Venta) as 'Cant_Venta',
     SUM(syv.Cant_Stock) as 'Cant_Stock'
 From (
-    -- Stock (última semana)
+    -- Stock
     SELECT
         ST.INI_CLIENTE AS 'Ini_Cliente',
         M.TIPO AS 'Tipo_Programa',
@@ -29,7 +30,7 @@ From (
             WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090503' THEN 'YAMP BEBO'
             ELSE ISNULL(MA.NEW_MARCA, EC.MARCA )
         END AS 'Marca',
-        CONCAT(FORMAT(SEM.ANO,'0'),'/',FORMAT(SEM.N_SEM,'00'),' - ',FORMAT(SEM.DIA_INICIO, 'MM/dd')) as 'Semanas',
+        FORMAT(SEM.DIA_FIN, 'yyyy-MM-dd') + ' Sem ' + FORMAT(SEM.N_SEM,'00') as 'Semanas',
         M.FIT AS 'Fit_Estilo',
 		CO.COLOR,
         EC.COD_COLOR as 'C_Color',
@@ -42,16 +43,16 @@ From (
     LEFT JOIN [DWH_INCO].[dbo].[MONITOREO] AS M ON EC.REF_MODELO = M.MODELO and  EC.MARCA = M.MARCA
     LEFT JOIN [DWH_INCO].[dbo].TIENDAS AS T ON ST.NUM_LOCAL = T.CODIGO
     LEFT JOIN [DWH_INCO].[dbo].MARCA AS MA ON EC.MARCA = MA.MARCA_BD
-    LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,ST.FECHA),CAST(ST.FECHA as date)) = SEM.DIA_INICIO
+    LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON CAST(ST.FECHA as date) BETWEEN SEM.DIA_INICIO AND SEM.DIA_FIN
     LEFT JOIN [DWH_INCO].[dbo].TIPO_PROGRAMA AS TP ON ST.INI_CLIENTE = TP.INI_CLIENTE AND EC.MARCA = TP.MARCA and M.TIPO = TP.TIPO
     
     WHERE ST.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
-    and st.FECHA between convert(date,DATEADD(day,-(7*(@semanas_stock)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+    and ST.FECHA between @fecha_inicio_stock and @fecha_fin
 
 
     UNION ALL
 
-    -- Ventas (últimas 8 semanas)
+    -- Ventas
     SELECT
         VT.INI_CLIENTE AS 'Ini_Cliente',
         M.TIPO AS 'Tipo_Programa',
@@ -65,7 +66,7 @@ From (
             WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090503' THEN 'YAMP BEBO'
             ELSE ISNULL(MA.NEW_MARCA, EC.MARCA )
         END AS 'Marca',
-        CONCAT(FORMAT(SEM.ANO,'0'),'/',FORMAT(SEM.N_SEM,'00'),' - ',FORMAT(SEM.DIA_INICIO, 'MM/dd')) as 'Semanas',
+        FORMAT(SEM.DIA_FIN, 'yyyy-MM-dd') + ' Sem ' + FORMAT(SEM.N_SEM,'00') as 'Semanas',
         M.FIT AS 'Fit_Estilo',
 		CO.COLOR,
         EC.COD_COLOR as 'C_Color',
@@ -78,11 +79,11 @@ From (
     LEFT JOIN [DWH_INCO].[dbo].[MONITOREO] AS M ON EC.REF_MODELO = M.MODELO and  EC.MARCA = M.MARCA
     LEFT JOIN [DWH_INCO].[dbo].TIENDAS AS T ON VT.NUM_LOCAL = T.CODIGO
     LEFT JOIN [DWH_INCO].[dbo].MARCA AS MA ON EC.MARCA = MA.MARCA_BD
-    LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,VT.FECHA),CAST(VT.FECHA as date)) = SEM.DIA_INICIO
+    LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON CAST(VT.FECHA as date) BETWEEN SEM.DIA_INICIO AND SEM.DIA_FIN
     LEFT JOIN [DWH_INCO].[dbo].TIPO_PROGRAMA AS TP ON VT.INI_CLIENTE = TP.INI_CLIENTE AND EC.MARCA = TP.MARCA and M.TIPO = TP.TIPO
 
     WHERE VT.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
-    and VT.FECHA between convert(date,DATEADD(day,-(7*(@semanas_venta)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+    and VT.FECHA between @fecha_inicio and @fecha_fin
 
 ) as syv
 GROUP BY

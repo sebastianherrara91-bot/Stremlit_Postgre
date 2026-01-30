@@ -96,3 +96,37 @@ def get_dataframe(consulta_sql, params=None):
     except Exception as e:
         st.error(f"Error al obtener datos: {str(e)}")
         return pd.DataFrame()  # Retorna un DataFrame vacío en caso de error
+
+@st.cache_data(ttl=3600)
+def get_semanas_disponibles():
+    """
+    Obtiene las semanas disponibles desde la base de datos, formateadas para los selectbox.
+    Retorna un diccionario que mapea la etiqueta de la semana a su fecha de fin real.
+    """
+    try:
+        engine = get_connection()
+        if engine is None:
+            return {}
+        
+        query = cargar_consulta_sql("Semanas_disponibles.sql")
+        if not query:
+            return {}
+            
+        df_semanas = obtener_datos_desde_sql(engine, query)
+        
+        if df_semanas.empty:
+            return {}
+
+        # Asegurar que la columna de fecha es del tipo datetime para evitar TypeErrors
+        df_semanas['FinSemana'] = pd.to_datetime(df_semanas['FinSemana'])
+
+        # Crear un diccionario de 'SemanaFormateada' -> 'FinSemana'
+        # Esto es más fácil de usar en el frontend.
+        # st.selectbox mostrará las keys, y podremos obtener la fecha (value) fácilmente.
+        semanas_dict = pd.Series(df_semanas.FinSemana.values, index=df_semanas.SemanaFormateada).to_dict()
+        
+        return semanas_dict
+        
+    except Exception as e:
+        st.error(f"Error al obtener la lista de semanas: {str(e)}")
+        return {}
