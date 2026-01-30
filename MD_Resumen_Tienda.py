@@ -6,6 +6,7 @@ import GraficaBarraDobleTalla as GBDT
 from pandas.api.types import CategoricalDtype
 import config
 import sidebar_filters # Importar el nuevo módulo
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode, JsCode # Importar AgGrid
 
 # Re-using styling functions from MD_Ventas_por_Tienda
 def resaltar_fila_max_semana(fila,semmax):
@@ -32,28 +33,59 @@ def main(df_tienda, df_color, df_talla):
     mapa_display_cl = pd.Series(tiendas_df.C_L.values, index=tiendas_df.display).to_dict()
     lista_tiendas_display = tiendas_df['display'].tolist()
 
+    # Añadir la opción "Todas las Tiendas" y colocarla al principio
+    opcion_todas = "Todas las Tiendas"
+    lista_tiendas_display.insert(0, opcion_todas)
+
     # Crear el popover con el radio button para seleccionar la tienda
     with st.popover("Seleccione una Tienda para analizar"):
         tienda_display_seleccionada = st.radio(
             "Tiendas",
             lista_tiendas_display,
-            index=0,
+            index=0, # Por defecto, selecciona "Todas las Tiendas"
             label_visibility="collapsed"
         )
     
     st.header(f"Resumen: {tienda_display_seleccionada}")
 
+    # Lógica de filtrado
+    if tienda_display_seleccionada == opcion_todas:
+        df_tienda_raw = df_tienda.copy()
+        df_color_local = df_color.copy()
+        df_talla_local = df_talla.copy()
+
+        # --- AGREGACIÓN PARA LA VISTA "TODAS LAS TIENDAS" ---
+        # Primero, calculamos el valor total de venta por fila para poder hacer el promedio ponderado después.
+        df_tienda_raw['PVP_x_Venta'] = df_tienda_raw['PVP_Prom'] * df_tienda_raw['Cant_Venta']
+        
+        # Agrupamos y agregamos los valores
+        group_by_cols = ['Ini_Cliente', 'Marca', 'Tipo_Programa', 'Fit_Estilo', 'Semanas']
+        agg_spec = {
+            'Cant_Venta': 'sum',
+            'Cant_Stock': 'sum',
+            'PVP_x_Venta': 'sum'
+        }
+        df_tienda_local = df_tienda_raw.groupby(group_by_cols, as_index=False).agg(agg_spec)
+
+        # Recalculamos el PVP Promedio ponderado
+        df_tienda_local['PVP_Prom'] = np.where(
+            df_tienda_local['Cant_Venta'] == 0, 
+            0, 
+            df_tienda_local['PVP_x_Venta'] / df_tienda_local['Cant_Venta']
+        ).round(0)
+        
+        # Eliminamos la columna auxiliar
+        df_tienda_local = df_tienda_local.drop(columns=['PVP_x_Venta'])
+
+    else:
+        cl_seleccionado = mapa_display_cl[tienda_display_seleccionada]
+        df_tienda_local = df_tienda[df_tienda['C_L'] == cl_seleccionado].copy()
+        df_color_local = df_color[df_color['C_L'] == cl_seleccionado].copy()
+        df_talla_local = df_talla[df_talla['C_L'] == cl_seleccionado].copy()
+
     if not tienda_display_seleccionada:
         st.warning("Por favor, seleccione una tienda.")
         return
-
-    # Obtener el C_L de la tienda seleccionada usando el mapa
-    cl_seleccionado = mapa_display_cl[tienda_display_seleccionada]
-
-    # --- 2. FILTRAR DATAFRAMES POR TIENDA SELECCIONADA (usando C_L) ---
-    df_tienda_local = df_tienda[df_tienda['C_L'] == cl_seleccionado].copy()
-    df_color_local = df_color[df_color['C_L'] == cl_seleccionado].copy()
-    df_talla_local = df_talla[df_talla['C_L'] == cl_seleccionado].copy()
 
     # --- 3. RENDERIZAR Y APLICAR FILTROS DEL SIDEBAR ---
     selections = sidebar_filters.get_filter_selections(df_tienda_local)
@@ -90,25 +122,85 @@ def main(df_tienda, df_color, df_talla):
     # --- LÓGICA DE TABLA ---
     df_tienda_local['Sem_Evac'] = np.where((df_tienda_local['Cant_Venta'] == 0), 0, df_tienda_local['Cant_Stock'] / df_tienda_local['Cant_Venta'])
     df_tienda_local['sort_key'] = (df_tienda_local['Tipo_Programa'] != 'programa').astype(int)
-    df_tienda_local = df_tienda_local.sort_values(by=['sort_key', 'C_L', 'Local', 'Ciudad', 'Marca', 'Tipo_Programa', 'Fit_Estilo', 'Semanas'],ascending=[True, True, True, True, True, False, True, True])
+    # No es necesario ordenar aquí para AgGrid, AgGrid lo gestiona.
+    # df_tienda_local = df_tienda_local.sort_values(by=['sort_key', 'C_L', 'Local', 'Ciudad', 'Marca', 'Tipo_Programa', 'Fit_Estilo', 'Semanas'],ascending=[True, True, True, True, True, False, True, True])
     df_tienda_local = df_tienda_local.drop(columns=['sort_key'])
+    df_tienda_local['__empty__'] = ''
 
-    # --- TABLA DE DETALLE ---
+
+    # --- TABLA DE DETALLE con AgGrid ---
     st.subheader("Detalle de Ventas y Stock")
     if not df_tienda_local.empty:
-        max_semana = df_tienda_local['Semanas'].max()
-        st.dataframe(
-            df_tienda_local[['Marca','Tipo_Programa','Fit_Estilo','Semanas','Cant_Venta','Cant_Stock','PVP_Prom','Sem_Evac']]
-            .rename(columns={'Cant_Venta': 'Vnt','Cant_Stock': 'Stk','PVP_Prom': 'PVP','Sem_Evac': 'S_Evc'})
-            .style.apply(resaltar_fila_max_semana, semmax=max_semana, axis=1)
-            .highlight_max(subset=['Vnt'], color='#FFFF93')
-            .apply(lambda x: highlight_min_non_zero(x, color='#FFFF93'), subset=['S_Evc'])
-            .apply(lambda x: highlight_min_non_zero(x, color='#F8D7DA'), subset=['Vnt'])
-            .highlight_max(subset=['S_Evc'], color='#F8D7DA')
-            .format({'Vnt': '{:,.0f}','Stk': '{:,.0f}','PVP': '$ {:,.0f}','S_Evc': '{:.1f}'}),
-            height=400, hide_index=True, 
-            width='stretch'
+        
+        # --- INICIO: Nueva configuración de formato ---
+        # Función JS para formatear números con punto de miles.
+        js_number_formatter = JsCode("""
+            function(params) {
+                if (params.value != null && params.value != undefined) {
+                    return Math.round(params.value).toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
+                } 
+                return '';
+            }
+        """)
+
+        # Función JS para formatear el PVP con signo $ y punto de miles.
+        js_pvp_formatter = JsCode("""
+            function(params) {
+                if (params.value != null && params.value != undefined) {
+                    return '$ ' + Math.round(params.value).toString().replace(/\\B(?=(\\d{3})+(?!\\d))/g, '.');
+                }
+                return '';
+            }
+        """)
+        # --- FIN: Nueva configuración de formato ---
+
+        gb = GridOptionsBuilder.from_dataframe(df_tienda_local)
+
+        # Definir el agrupamiento de filas
+        gb.configure_column("Marca", rowGroup=True, hide=True)
+        gb.configure_column("Fit_Estilo", header_name="Fit Estilo", initialSort='asc')
+        
+        # Ocultar otras columnas
+        gb.configure_column("C_L", hide=True)
+        gb.configure_column("Local", hide=True)
+        gb.configure_column("Ciudad", hide=True)
+        gb.configure_column("Ini_Cliente", hide=True)
+
+        # Configurar columnas a mostrar y sus formatos
+        gb.configure_column("Tipo_Programa", header_name="Tipo Programa")
+        gb.configure_column("Semanas", header_name="Semanas", initialSort='asc')
+        
+        gb.configure_column("Cant_Venta", header_name="Venta", aggFunc='sum', valueFormatter=js_number_formatter)
+        gb.configure_column("Cant_Stock", header_name="Stock", aggFunc='sum', valueFormatter=js_number_formatter)
+        gb.configure_column("PVP_Prom", header_name="PVP", precision=0, valueFormatter=js_pvp_formatter)
+        gb.configure_column("Sem_Evac", header_name="S_Evc", precision=1, valueFormatter=js_number_formatter)
+        gb.configure_column("__empty__", header_name="", width=50, suppressMenu=True, suppressMovable=True, suppressResizable=True, sortable=False, filter=False)
+
+        # Configurar el tipo de visualización del grupo
+        gb.configure_grid_options(
+            domLayout='normal',
+            groupDisplayType='groupRows',
+            defaultColDef={
+                'resizable': True,
+                'sortable': True,
+                'filter': True,
+            }
         )
+        
+        gridOptions = gb.build()
+
+        AgGrid(
+            df_tienda_local,
+            gridOptions=gridOptions,
+            allow_unsafe_jscode=True,
+            enable_enterprise_modules=True,
+            height=400,
+            columnSize="autoSizeAllColumns",
+            data_return_mode=DataReturnMode.AS_INPUT,
+            update_mode=GridUpdateMode.MODEL_CHANGED,
+            key='resumen_tienda_grid'
+        )
+
     else:
         st.warning("No hay datos de detalle para esta tienda con los filtros seleccionados.")
 

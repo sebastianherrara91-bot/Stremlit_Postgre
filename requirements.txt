@@ -8,3 +8,4 @@ sqlalchemy
 streamlit-elements
 python-dotenv
 xlsxwriter
+streamlit-aggrid==1.2.1.post2

@@ -40,12 +40,18 @@ def main():
         else:
             lista_semanas = list(semanas_dict.keys())
             
-            # Default a la última semana
-            default_index = 0
+            # 'Semana Hasta' por defecto será la más reciente.
+            default_index_hasta = 0
+
+            # 'Semana Desde' por defecto será 6 semanas antes (índice 5).
+            # Se añade un control para evitar errores si hay menos de 6 semanas de datos.
+            default_index_desde = 5
+            if len(lista_semanas) <= default_index_desde:
+                default_index_desde = len(lista_semanas) - 1 if len(lista_semanas) > 0 else 0
 
             # Selectores de semana (Semana Desde antes que Semana Hasta)
-            semana_desde_str = st.sidebar.selectbox("Semana Desde", lista_semanas, index=default_index)
-            semana_hasta_str = st.sidebar.selectbox("Semana Hasta", lista_semanas, index=default_index)
+            semana_desde_str = st.sidebar.selectbox("Semana Desde", lista_semanas, index=default_index_desde)
+            semana_hasta_str = st.sidebar.selectbox("Semana Hasta", lista_semanas, index=default_index_hasta)
 
             # Obtener las fechas reales del diccionario
             fecha_fin = semanas_dict[semana_hasta_str]
