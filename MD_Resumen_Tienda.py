@@ -3,24 +3,15 @@ import pandas as pd
 import numpy as np
 import GraficaBarraDobleColor as GBD
 import GraficaBarraDobleTalla as GBDT
+import GestorSQL as GSQL
 from pandas.api.types import CategoricalDtype
 import config
 import sidebar_filters # Importar el nuevo módulo
+import excel_exporter
+import base64
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode, JsCode # Importar AgGrid
 
-# Re-using styling functions from MD_Ventas_por_Tienda
-def resaltar_fila_max_semana(fila,semmax):
-    if fila['Semanas'] == semmax:
-        return ['background-color: #D4EDDA'] * len(fila)
-    else:
-        return [''] * len(fila)
-
-def highlight_min_non_zero(col, color):
-    non_zero_vals = col.replace(0, np.nan)
-    min_val = non_zero_vals.min()
-    return [f'background-color: {color}' if v == min_val else '' for v in col]
-
-def main(df_tienda, df_color, df_talla):
+def main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_seleccionado):
 
     # --- 1. FILTRO PRINCIPAL POR TIENDA ---
     # Preparar los datos para el filtro de tienda
@@ -122,18 +113,13 @@ def main(df_tienda, df_color, df_talla):
     # --- LÓGICA DE TABLA ---
     df_tienda_local['Sem_Evac'] = np.where((df_tienda_local['Cant_Venta'] == 0), 0, df_tienda_local['Cant_Stock'] / df_tienda_local['Cant_Venta'])
     df_tienda_local['sort_key'] = (df_tienda_local['Tipo_Programa'] != 'programa').astype(int)
-    # No es necesario ordenar aquí para AgGrid, AgGrid lo gestiona.
-    # df_tienda_local = df_tienda_local.sort_values(by=['sort_key', 'C_L', 'Local', 'Ciudad', 'Marca', 'Tipo_Programa', 'Fit_Estilo', 'Semanas'],ascending=[True, True, True, True, True, False, True, True])
     df_tienda_local = df_tienda_local.drop(columns=['sort_key'])
     df_tienda_local['__empty__'] = ''
-
 
     # --- TABLA DE DETALLE con AgGrid ---
     st.subheader("Detalle de Ventas y Stock")
     if not df_tienda_local.empty:
         
-        # --- INICIO: Nueva configuración de formato ---
-        # Función JS para formatear números con punto de miles.
         js_number_formatter = JsCode("""
             function(params) {
                 if (params.value != null && params.value != undefined) {
@@ -143,7 +129,6 @@ def main(df_tienda, df_color, df_talla):
             }
         """)
 
-        # Función JS para formatear el PVP con signo $ y punto de miles.
         js_pvp_formatter = JsCode("""
             function(params) {
                 if (params.value != null && params.value != undefined) {
@@ -152,21 +137,17 @@ def main(df_tienda, df_color, df_talla):
                 return '';
             }
         """)
-        # --- FIN: Nueva configuración de formato ---
 
         gb = GridOptionsBuilder.from_dataframe(df_tienda_local)
 
-        # Definir el agrupamiento de filas
         gb.configure_column("Marca", rowGroup=True, hide=True)
         gb.configure_column("Fit_Estilo", header_name="Fit Estilo", initialSort='asc')
         
-        # Ocultar otras columnas
         gb.configure_column("C_L", hide=True)
         gb.configure_column("Local", hide=True)
         gb.configure_column("Ciudad", hide=True)
         gb.configure_column("Ini_Cliente", hide=True)
 
-        # Configurar columnas a mostrar y sus formatos
         gb.configure_column("Tipo_Programa", header_name="Tipo Programa")
         gb.configure_column("Semanas", header_name="Semanas", initialSort='asc')
         
@@ -176,7 +157,6 @@ def main(df_tienda, df_color, df_talla):
         gb.configure_column("Sem_Evac", header_name="S_Evc", precision=1, valueFormatter=js_number_formatter)
         gb.configure_column("__empty__", header_name="", width=50, suppressMenu=True, suppressMovable=True, suppressResizable=True, sortable=False, filter=False)
 
-        # Configurar el tipo de visualización del grupo
         gb.configure_grid_options(
             domLayout='normal',
             groupDisplayType='groupRows',
@@ -247,3 +227,47 @@ def main(df_tienda, df_color, df_talla):
             st.plotly_chart(fig_talla, use_container_width=True, config={'scrollZoom': False, 'displayModeBar': False})
         else:
             st.warning("No hay datos de talla para esta tienda.")
+
+    st.divider()
+
+    st.subheader("Descargar Informe Detallado")
+    
+    with st.container(border=True):
+        st.markdown("##### Criterios de descarga:")
+        
+        col1, col2, col3 = st.columns(3)
+        col1.markdown(f"**Tienda:** `{tienda_display_seleccionada}`")
+        col2.markdown(f"**Fechas:** `{fecha_inicio.strftime('%Y-%m-%d')}` a `{fecha_fin.strftime('%Y-%m-%d')}`")
+        col3.markdown(f"**Cliente:** `{cliente_seleccionado}`")
+        
+        # Mostrar otros filtros activos
+        if selections:
+            otros_filtros = []
+            for filtro, valor in selections.items():
+                valor_str = ", ".join(map(str, valor)) if isinstance(valor, list) else str(valor)
+                otros_filtros.append(f"**{filtro.replace('_', ' ')}:** `{valor_str}`")
+            st.markdown(" ".join(otros_filtros))
+
+    if st.button("Generar y Descargar Excel", type="primary"):
+        with st.spinner("Generando archivo Excel... Esto puede tardar unos segundos."):
+            # Usar el rango de fecha completo para el stock, como se solicitó.
+            df_detalle = GSQL.get_dataframe("Ventas_StockUltsem.sql", params=(fecha_inicio, fecha_fin, fecha_inicio, cliente_seleccionado))
+            
+            if not df_detalle.empty:
+                df_filtrado = df_detalle.copy()
+                if tienda_display_seleccionada != "Todas las Tiendas":
+                    cl_seleccionado_map = mapa_display_cl[tienda_display_seleccionada]
+                    df_filtrado = df_filtrado[df_filtrado['C_L'] == cl_seleccionado_map]
+                
+                df_filtrado = sidebar_filters.apply_filters(df_filtrado, selections)
+
+                if not df_filtrado.empty:
+                    excel_bytes = excel_exporter.to_excel(df_filtrado)
+                    b64 = base64.b64encode(excel_bytes).decode()
+                    href = f'<a href="data:application/octet-stream;base64,{b64}" download="detalle_ventas_stock.xlsx">**Descargar Archivo Excel**</a>'
+                    st.markdown(href, unsafe_allow_html=True)
+                    st.success("¡Tu archivo está listo para descargar!")
+                else:
+                    st.warning("No se encontraron datos detallados para los filtros seleccionados.")
+            else:
+                st.warning("No se pudieron obtener los datos detallados desde la base de datos.")

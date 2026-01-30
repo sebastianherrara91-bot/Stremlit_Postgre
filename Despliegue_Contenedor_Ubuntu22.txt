@@ -212,4 +212,4 @@ cd /opt/DashInco && git pull && source venv/bin/activate && pip install -r requi
 # ---
 # NUEVO: Comando de actualización COMPLETA (usar si hay problemas con librerías)
 # Este comando borra el entorno virtual y lo recrea para forzar una instalación limpia.
-# cd /opt/DashInco && git pull && rm -rf venv && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && deactivate && sudo systemctl restart streamlit.service
+cd /opt/DashInco && git pull && rm -rf venv && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && deactivate && sudo systemctl restart streamlit.service

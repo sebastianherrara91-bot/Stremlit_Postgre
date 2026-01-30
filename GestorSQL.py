@@ -130,3 +130,29 @@ def get_semanas_disponibles():
     except Exception as e:
         st.error(f"Error al obtener la lista de semanas: {str(e)}")
         return {}
+
+@st.cache_data(ttl=3600)
+def get_clientes():
+    """
+    Obtiene una lista de clientes únicos desde la base de datos.
+    """
+    try:
+        engine = get_connection()
+        if engine is None:
+            return []
+        
+        query = cargar_consulta_sql("Clientes.sql")
+        if not query:
+            return []
+            
+        df_clientes = obtener_datos_desde_sql(engine, query)
+        
+        if df_clientes.empty:
+            return []
+
+        # Devuelve una lista simple de los clientes
+        return df_clientes['INI_CLIENTE'].tolist()
+        
+    except Exception as e:
+        st.error(f"Error al obtener la lista de clientes: {str(e)}")
+        return []

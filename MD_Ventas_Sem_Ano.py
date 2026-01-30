@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-def main(df):
+def main(df, cliente_seleccionado):
     st.subheader("Comparativo Ventas Semanales por Año")
 
     # --- Filtros ---

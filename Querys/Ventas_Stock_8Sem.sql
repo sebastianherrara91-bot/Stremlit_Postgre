@@ -1,3 +1,5 @@
+DECLARE @ini_cliente VARCHAR(10) = ?;
+
 Select
 syv.INI_CLIENTE AS 'Ini_Cliente'
 ,syv.C_L
@@ -73,7 +75,7 @@ LEFT JOIN [DWH_INCO].[dbo].TIENDAS AS T ON ST.NUM_LOCAL = T.CODIGO
 LEFT JOIN [DWH_INCO].[dbo].MARCA AS MA ON EC.MARCA = MA.MARCA_BD
 LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,ST.FECHA),CAST(ST.FECHA as date)) = SEM.DIA_INICIO
 
-WHERE ST.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and st.FECHA between convert(date,DATEADD(day,-(7*(8)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+WHERE ST.INI_CLIENTE = @ini_cliente and T.TIPO = 'TIENDA' and st.FECHA between convert(date,DATEADD(day,-(7*(8)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
 --Where VT.INI_CLIENTE = 'FL' and VT.FECHA between '20230901' and '20240730'
 
 UNION all
@@ -123,7 +125,7 @@ LEFT JOIN [DWH_INCO].[dbo].TIENDAS AS T ON VT.NUM_LOCAL = T.CODIGO
 LEFT JOIN [DWH_INCO].[dbo].MARCA AS MA ON EC.MARCA = MA.MARCA_BD
 LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,VT.FECHA),CAST(VT.FECHA as date)) = SEM.DIA_INICIO
 
-WHERE VT.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and VT.FECHA between convert(date,DATEADD(day,-(7*(8)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+WHERE VT.INI_CLIENTE = @ini_cliente and T.TIPO = 'TIENDA' and VT.FECHA between convert(date,DATEADD(day,-(7*(8)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
 --Where VT.INI_CLIENTE = 'FL' and VT.FECHA between '20230901' and '20240730'
 
 ) as syv

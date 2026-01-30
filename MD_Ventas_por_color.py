@@ -7,19 +7,9 @@ import GraficaBarraDobleColor as GBD
 import io
 from datetime import datetime
 from excel_exporter import to_excel
-
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-import numpy as np
-import GraficaBarraDobleColor as GBD
-import io
-from datetime import datetime
-from excel_exporter import to_excel
 import sidebar_filters # Importar el nuevo módulo
 
-def main(DataF):
+def main(DataF, cliente_seleccionado):
 
     # Renderizar y aplicar filtros
     selections = sidebar_filters.get_filter_selections(DataF)

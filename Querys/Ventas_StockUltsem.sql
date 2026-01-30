@@ -1,5 +1,7 @@
-DECLARE @semanas_stock INT = ?;
-DECLARE @semanas_venta INT = ?;
+DECLARE @fecha_inicio_venta DATE = ?;
+DECLARE @fecha_fin_venta DATE = ?;
+DECLARE @fecha_inicio_stock DATE = ?;
+DECLARE @ini_cliente VARCHAR(10) = ?;
 
 Select
 syv.INI_CLIENTE AS 'Ini_Cliente'
@@ -78,8 +80,8 @@ LEFT JOIN [DWH_INCO].[dbo].MARCA AS MA ON EC.MARCA = MA.MARCA_BD
 LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,ST.FECHA),CAST(ST.FECHA as date)) = SEM.DIA_INICIO
 LEFT JOIN [DWH_INCO].[dbo].TIPO_PROGRAMA AS TP ON ST.INI_CLIENTE = TP.INI_CLIENTE AND EC.MARCA = TP.MARCA and M.TIPO = TP.TIPO
 
-WHERE ST.INI_CLIENTE = 'FL' and TP.ACTIVO = 1 and T.TIPO = 'TIENDA' 
-and st.FECHA between convert(date,DATEADD(day,-(7*(@semanas_stock)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+WHERE ST.INI_CLIENTE = @ini_cliente and TP.ACTIVO = 1 and T.TIPO = 'TIENDA' 
+and st.FECHA between @fecha_inicio_stock and @fecha_fin_venta
 
 UNION all
 
@@ -130,8 +132,8 @@ LEFT JOIN [DWH_INCO].[dbo].MARCA AS MA ON EC.MARCA = MA.MARCA_BD
 LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,VT.FECHA),CAST(VT.FECHA as date)) = SEM.DIA_INICIO
 LEFT JOIN [DWH_INCO].[dbo].TIPO_PROGRAMA AS TP ON VT.INI_CLIENTE = TP.INI_CLIENTE AND EC.MARCA = TP.MARCA and M.TIPO = TP.TIPO
 
-WHERE VT.INI_CLIENTE = 'FL' and TP.ACTIVO = 1 and T.TIPO = 'TIENDA' 
-and VT.FECHA between convert(date,DATEADD(day,-(7*(@semanas_venta)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+WHERE VT.INI_CLIENTE = @ini_cliente and TP.ACTIVO = 1 and T.TIPO = 'TIENDA' 
+and VT.FECHA between @fecha_inicio_venta and @fecha_fin_venta
 --Where VT.INI_CLIENTE = 'FL' and VT.FECHA between '20230901' and '20240730'
 
 ) as syv

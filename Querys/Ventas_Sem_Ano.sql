@@ -1,5 +1,6 @@
 DECLARE @semanas_stock INT = ?;
 DECLARE @semanas_venta INT = ?;
+DECLARE @ini_cliente VARCHAR(10) = ?;
 
 Select
     syv.Ini_Cliente,
@@ -41,7 +42,7 @@ From (
     LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,ST.FECHA),CAST(ST.FECHA as date)) = SEM.DIA_INICIO
     LEFT JOIN [DWH_INCO].[dbo].TIPO_PROGRAMA AS TP ON ST.INI_CLIENTE = TP.INI_CLIENTE AND EC.MARCA = TP.MARCA and M.TIPO = TP.TIPO
     
-    WHERE ST.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
+    WHERE ST.INI_CLIENTE = @ini_cliente and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
     and 
 	(
 	ST.FECHA between convert(date,DATEADD(day,-(7*(@semanas_stock)),DATEADD(day,-1,DATEADD(week,DATEDIFF(week,-1,GETDATE()),-1)))) and convert(date,DATEADD(day,-1,DATEADD(week,DATEDIFF(week,-1,GETDATE()),-1)))
@@ -77,7 +78,7 @@ From (
     LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,VT.FECHA),CAST(VT.FECHA as date)) = SEM.DIA_INICIO
     LEFT JOIN [DWH_INCO].[dbo].TIPO_PROGRAMA AS TP ON VT.INI_CLIENTE = TP.INI_CLIENTE AND EC.MARCA = TP.MARCA and M.TIPO = TP.TIPO
 
-    WHERE VT.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
+    WHERE VT.INI_CLIENTE = @ini_cliente and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
     and 
 	(
 	VT.FECHA between convert(date,DATEADD(day,-(7*(@semanas_venta)),DATEADD(day,-1,DATEADD(week,DATEDIFF(week,-1,GETDATE()),-1)))) and convert(date,DATEADD(day,-1,DATEADD(week,DATEDIFF(week,-1,GETDATE()),-1)))

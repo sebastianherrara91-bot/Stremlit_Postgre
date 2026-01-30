@@ -12,7 +12,6 @@ def get_filter_selections(df):
 
     # Configuración de filtros
     filtros_selectbox = [
-        ("Cliente", "Ini_Cliente", False),
         ("Tipo Programa", "Tipo_Programa", True),
         ("Marca", "Marca", False)
     ]
@@ -23,7 +22,7 @@ def get_filter_selections(df):
 
     # Renderizar y capturar selecciones
     st.sidebar.divider()
-    st.sidebar.subheader("Filtros")
+    #st.sidebar.subheader("Filtros")
     for titulo, columna, orden in filtros_selectbox:
         with st.sidebar.popover(titulo, use_container_width=True):
             opciones = ['Todos'] + sorted(list(map(str, df[columna].unique())), reverse=orden)

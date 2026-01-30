@@ -4,18 +4,10 @@ import GraficaBarraDobleTalla as GBDT
 from excel_exporter import to_excel
 from datetime import datetime
 from pandas.api.types import CategoricalDtype
-import config # Importar el nuevo módulo de configuración
-
-import streamlit as st
-import pandas as pd
-import GraficaBarraDobleTalla as GBDT
-from excel_exporter import to_excel
-from datetime import datetime
-from pandas.api.types import CategoricalDtype
 import config
 import sidebar_filters # Importar el nuevo módulo
 
-def main(DataF):
+def main(DataF, cliente_seleccionado):
 
 
     # Renderizar y aplicar filtros

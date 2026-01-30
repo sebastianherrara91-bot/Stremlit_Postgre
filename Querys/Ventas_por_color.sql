@@ -1,6 +1,7 @@
 DECLARE @fecha_inicio DATE = ?;
 DECLARE @fecha_fin DATE = ?;
 DECLARE @fecha_inicio_stock DATE = ?; -- El inicio del rango de stock
+DECLARE @ini_cliente VARCHAR(10) = ?;
 
 Select
     syv.Ini_Cliente,
@@ -47,7 +48,7 @@ From (
     LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON CAST(ST.FECHA as date) BETWEEN SEM.DIA_INICIO AND SEM.DIA_FIN
     LEFT JOIN [DWH_INCO].[dbo].TIPO_PROGRAMA AS TP ON ST.INI_CLIENTE = TP.INI_CLIENTE AND EC.MARCA = TP.MARCA and M.TIPO = TP.TIPO
 
-    WHERE ST.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
+    WHERE ST.INI_CLIENTE = @ini_cliente and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
     and ST.FECHA between @fecha_inicio_stock and @fecha_fin
 
     UNION ALL
@@ -82,7 +83,7 @@ From (
     LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON CAST(VT.FECHA as date) BETWEEN SEM.DIA_INICIO AND SEM.DIA_FIN
     LEFT JOIN [DWH_INCO].[dbo].TIPO_PROGRAMA AS TP ON VT.INI_CLIENTE = TP.INI_CLIENTE AND EC.MARCA = TP.MARCA and M.TIPO = TP.TIPO
 
-    WHERE VT.INI_CLIENTE = 'FL' and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
+    WHERE VT.INI_CLIENTE = @ini_cliente and T.TIPO = 'TIENDA' and ISNULL(TP.ACTIVO,1) = 1
     and VT.FECHA between @fecha_inicio and @fecha_fin
 
 ) as syv

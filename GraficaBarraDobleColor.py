@@ -39,7 +39,7 @@ def crear_grafica_barra_doble_horizontal(
     fig = go.Figure()
 
     # Define el color de la barra: usa la columna de color si existe, si no, un gris por defecto.
-    bar_color = dataframe[color_hex_col] if color_hex_col is not None else '#888888'
+    bar_color = dataframe[color_hex_col] if color_hex_col is not None and color_hex_col in dataframe.columns else '#888888'
 
     # --- Barra 1 ---
     fig.add_trace(go.Bar(
