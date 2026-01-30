@@ -188,24 +188,30 @@ def main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_selecci
     
     # --- GRÁFICOS ---
 
-    st.dataframe(df_color_local)
+    
     col_grafico_color, col_grafico_talla = st.columns(2)
 
     with col_grafico_color:
         if not df_color_local.empty:
             df_color_chart = df_color_local.groupby(['COLOR', 'Color_Hexa','C_Color']).agg({'Cant_Venta': 'sum', 'Cant_Stock': 'sum'}).reset_index()
             df_color_chart['Total_Unidades'] = df_color_chart['Cant_Venta'] + df_color_chart['Cant_Stock']
+            
             total_unidades_color = df_color_chart['Total_Unidades'].sum()
             df_color_chart['%_Participacion_Total'] = (df_color_chart['Total_Unidades'] / total_unidades_color) * 100 if total_unidades_color > 0 else 0
             df_color_chart = df_color_chart[df_color_chart['%_Participacion_Total'] >= slider_participacion]
-
+            
             T_Venta_Color = df_color_chart['Cant_Venta'].sum()
             T_Stock_Color = df_color_chart['Cant_Stock'].sum()
-            df_color_chart['%_Participacion_Venta'] = (df_color_chart['Cant_Venta'] / T_Venta_Color) * 100 if T_Venta_Color else 0
-            df_color_chart['%_Participacion_Stock'] = (df_color_chart['Cant_Stock'] / T_Stock_Color) * 100 if T_Stock_Color else 0
+            df_color_chart['%_Participacion_Venta_C'] = (df_color_chart['Cant_Venta'] / T_Venta_Color) * 100 if T_Venta_Color else 0
+            df_color_chart['%_Participacion_Stock_C'] = (df_color_chart['Cant_Stock'] / T_Stock_Color) * 100 if T_Stock_Color else 0
+            #Ordenar por participacion total y luego por Participacion por Venta
+            df_color_chart = df_color_chart.sort_values(by=['%_Participacion_Total', '%_Participacion_Venta_C'], ascending=[False, False])
+            #st.dataframe(df_color_chart)
             
-            fig_color = GBD.crear_grafica_barra_doble_horizontal(dataframe=df_color_chart, eje_y_col=['C_Color','COLOR'], eje_x_col1='%_Participacion_Venta', eje_x_col2='%_Participacion_Stock', color_hex_col='Color_Hexa', custom_data_col1='Cant_Venta', custom_data_col2='Cant_Stock', titulo="Participación por Color", nombre_barra1="% Venta", nombre_barra2="% Stock", height=800)
+            fig_color = GBD.crear_grafica_barra_doble_horizontal(dataframe=df_color_chart, eje_y_col=['C_Color','COLOR'], eje_x_col1='%_Participacion_Venta_C', eje_x_col2='%_Participacion_Stock_C', color_hex_col='Color_Hexa', custom_data_col1='Cant_Venta', custom_data_col2='Cant_Stock', titulo="Participación por Color", nombre_barra1="% Vnt", nombre_barra2="% Stk", height=800)
             st.plotly_chart(fig_color, use_container_width=True, config={'scrollZoom': False, 'displayModeBar': False})
+
+            
         else:
             st.warning("No hay datos de color para esta tienda.")
 
@@ -221,11 +227,11 @@ def main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_selecci
             df_talla_chart = df_talla_local.groupby(['Talla'], observed=False).agg({'Cant_Venta': 'sum', 'Cant_Stock': 'sum'}).reset_index()
             T_Venta_Talla = df_talla_chart['Cant_Venta'].sum()
             T_Stock_Talla = df_talla_chart['Cant_Stock'].sum()
-            df_talla_chart['%_Participacion_Venta'] = (df_talla_chart['Cant_Venta'] / T_Venta_Talla) * 100 if T_Venta_Talla else 0
-            df_talla_chart['%_Participacion_Stock'] = (df_talla_chart['Cant_Stock'] / T_Stock_Talla) * 100 if T_Stock_Talla else 0
+            df_talla_chart['%_Participacion_Venta_Talla'] = (df_talla_chart['Cant_Venta'] / T_Venta_Talla) * 100 if T_Venta_Talla else 0
+            df_talla_chart['%_Participacion_Stock_Talla'] = (df_talla_chart['Cant_Stock'] / T_Stock_Talla) * 100 if T_Stock_Talla else 0
             df_talla_chart = df_talla_chart.sort_values(by='Talla')
 
-            fig_talla = GBDT.crear_grafica_barra_doble_horizontal(dataframe=df_talla_chart, eje_y_col='Talla', eje_x_col1='%_Participacion_Venta', eje_x_col2='%_Participacion_Stock', custom_data_col1='Cant_Venta', custom_data_col2='Cant_Stock', titulo="Participación por Talla", nombre_barra1="% Venta", nombre_barra2="% Stock", height=800)
+            fig_talla = GBDT.crear_grafica_barra_doble_horizontal(dataframe=df_talla_chart, eje_y_col='Talla', eje_x_col1='%_Participacion_Venta_Talla', eje_x_col2='%_Participacion_Stock_Talla', custom_data_col1='Cant_Venta', custom_data_col2='Cant_Stock', titulo="Participación por Talla", nombre_barra1="% Venta", nombre_barra2="% Stock", height=800)
             st.plotly_chart(fig_talla, use_container_width=True, config={'scrollZoom': False, 'displayModeBar': False})
         else:
             st.warning("No hay datos de talla para esta tienda.")

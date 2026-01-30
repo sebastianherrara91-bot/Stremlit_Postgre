@@ -41,33 +41,70 @@ def crear_grafica_barra_doble_horizontal(
     # Define el color de la barra: usa la columna de color si existe, si no, un gris por defecto.
     bar_color = dataframe[color_hex_col] if color_hex_col is not None and color_hex_col in dataframe.columns else '#888888'
 
+    # Precalcular suma de porcentajes por grupo de COLOR para el texto (Barra 1 y 2)
+    col_agrupacion = eje_y_col[1]
+    total_pct_1 = dataframe.groupby(col_agrupacion)[eje_x_col1].transform('sum')
+    total_pct_2 = dataframe.groupby(col_agrupacion)[eje_x_col2].transform('sum')
+
+    # Precalcular suma de unidades por grupo de COLOR para el hover
+    total_und_1 = dataframe.groupby(col_agrupacion)[custom_data_col1].transform('sum')
+    total_und_2 = dataframe.groupby(col_agrupacion)[custom_data_col2].transform('sum')
+
     # --- Barra 1 ---
+    # Crear DataFrame para customdata con nombres únicos para evitar errores de duplicados
+    customdata_1 = pd.DataFrame({
+        'col0': dataframe[eje_y_col[0]],          # C_Color
+        'col1': dataframe[custom_data_col1],      # Unds_Propia
+        'col2': total_pct_1,                      # Pct_Total_Grupo
+        'col3': total_und_1                       # Unds_Total_Grupo
+    })
+
+    # Usamos el último índice del grupo (quien está "más abajo" en la tabla) para el texto
+    # Esto asegura consistencia visual si las barras se superponen
+    idx_last_1 = dataframe.groupby(col_agrupacion).tail(1).index
+    text_1 = pd.Series([''] * len(dataframe), index=dataframe.index)
+    # Formateamos el texto solo para los índices seleccionados
+    text_1.loc[idx_last_1] = total_pct_1.loc[idx_last_1].apply(lambda x: f'{x:.1f}%')
+
     fig.add_trace(go.Bar(
         x=dataframe[eje_x_col1],
         y=dataframe[eje_y_col[1]],
         orientation='h',
         name=nombre_barra1,
-        customdata=dataframe[[custom_data_col1, eje_y_col[0]]],
+        customdata=customdata_1,
         marker_color=bar_color,
         marker_line_color='black',
         marker_line_width=1,
-        hovertemplate=f'<b>%{{y}}</b><br><b>{nombre_barra1}:</b> %{{x:.2f}}%<br><b>Unidades:</b> %{{customdata[0]:,}}<br><b>C_Color:</b> %{{customdata[1]}}<extra></extra>',
-        text=dataframe[eje_x_col1].apply(lambda x: f'{x:.1f}%'),
+        hovertemplate=f'<b>%{{y}} %{{customdata[0]}}</b><br><b>% {nombre_barra1}:</b> %{{x:.1f}}% de %{{customdata[2]:.1f}}%<br><b>Unds:</b> %{{customdata[1]:,.0f}} de %{{customdata[3]:,.0f}}<extra></extra>',
+        text=text_1,
         textposition='outside'
     ))
 
     # --- Barra 2 ---
+    # Crear DataFrame para customdata con nombres únicos
+    customdata_2 = pd.DataFrame({
+        'col0': dataframe[eje_y_col[0]],          # C_Color
+        'col1': dataframe[custom_data_col2],      # Unds_Propia (Stock)
+        'col2': total_pct_2,                      # Pct_Total_Grupo
+        'col3': total_und_2                       # Unds_Total_Grupo
+    })
+
+    # Máscara para texto de Barra 2: Usar el último registro del grupo
+    idx_last_2 = dataframe.groupby(col_agrupacion).tail(1).index
+    text_2 = pd.Series([''] * len(dataframe), index=dataframe.index)
+    text_2.loc[idx_last_2] = total_pct_2.loc[idx_last_2].apply(lambda x: f'{x:.1f}%')
+
     fig.add_trace(go.Bar(
         x=dataframe[eje_x_col2],
         y=dataframe[eje_y_col[1]],
         orientation='h',
         name=nombre_barra2,
-        customdata=dataframe[[custom_data_col2, eje_y_col[0]]],
+        customdata=customdata_2,
         marker_color=bar_color,
         marker_line_color='black',
         marker_line_width=1,
-        hovertemplate=f'<b>%{{y}}</b><br><b>{nombre_barra2}:</b> %{{x:.2f}}%<br><b>Unidades:</b> %{{customdata[0]:,}}<br><b>C_Color:</b> %{{customdata[1]}}<extra></extra>',
-        text=dataframe[eje_x_col2].apply(lambda x: f'{x:.1f}%'),
+        hovertemplate=f'<b>%{{y}} %{{customdata[0]}}</b><br><b>% {nombre_barra2}:</b> %{{x:.1f}}% de %{{customdata[2]:.1f}}%<br><b>Unds:</b> %{{customdata[1]:,.0f}} de %{{customdata[3]:,.0f}}<extra></extra>',
+        text=text_2,
         textposition='outside'
     ))
 
