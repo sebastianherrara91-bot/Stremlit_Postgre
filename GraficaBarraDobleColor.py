@@ -3,7 +3,7 @@ import pandas as pd
 
 def crear_grafica_barra_doble_horizontal(
     dataframe: pd.DataFrame,
-    eje_y_col: str,
+    eje_y_col: list,
     eje_x_col1: str,
     eje_x_col2: str,
     custom_data_col1: str,
@@ -44,14 +44,14 @@ def crear_grafica_barra_doble_horizontal(
     # --- Barra 1 ---
     fig.add_trace(go.Bar(
         x=dataframe[eje_x_col1],
-        y=dataframe[eje_y_col],
+        y=dataframe[eje_y_col[1]],
         orientation='h',
         name=nombre_barra1,
-        customdata=dataframe[custom_data_col1],
+        customdata=dataframe[[custom_data_col1, eje_y_col[0]]],
         marker_color=bar_color,
         marker_line_color='black',
         marker_line_width=1,
-        hovertemplate=f'<b>%{{y}}</b><br><b>{nombre_barra1}:</b> %{{x:.2f}}%<br><b>Unidades:</b> %{{customdata:,}}<extra></extra>',
+        hovertemplate=f'<b>%{{y}}</b><br><b>{nombre_barra1}:</b> %{{x:.2f}}%<br><b>Unidades:</b> %{{customdata[0]:,}}<br><b>C_Color:</b> %{{customdata[1]}}<extra></extra>',
         text=dataframe[eje_x_col1].apply(lambda x: f'{x:.1f}%'),
         textposition='outside'
     ))
@@ -59,14 +59,14 @@ def crear_grafica_barra_doble_horizontal(
     # --- Barra 2 ---
     fig.add_trace(go.Bar(
         x=dataframe[eje_x_col2],
-        y=dataframe[eje_y_col],
+        y=dataframe[eje_y_col[1]],
         orientation='h',
         name=nombre_barra2,
-        customdata=dataframe[custom_data_col2],
+        customdata=dataframe[[custom_data_col2, eje_y_col[0]]],
         marker_color=bar_color,
         marker_line_color='black',
         marker_line_width=1,
-        hovertemplate=f'<b>%{{y}}</b><br><b>{nombre_barra2}:</b> %{{x:.2f}}%<br><b>Unidades:</b> %{{customdata:,}}<extra></extra>',
+        hovertemplate=f'<b>%{{y}}</b><br><b>{nombre_barra2}:</b> %{{x:.2f}}%<br><b>Unidades:</b> %{{customdata[0]:,}}<br><b>C_Color:</b> %{{customdata[1]}}<extra></extra>',
         text=dataframe[eje_x_col2].apply(lambda x: f'{x:.1f}%'),
         textposition='outside'
     ))
