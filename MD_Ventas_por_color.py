@@ -23,7 +23,7 @@ def main(DataF, cliente_seleccionado):
     df_calculos['%_Participacion_Total'] = (df_calculos['Total_Unidades'] / total_unidades_global) * 100 if total_unidades_global else None
 
     slider = st.sidebar.slider(
-        "Quitar % participacion menor a: ", # texto
+        "Quitar % Color, menor a: ", # texto
         min_value=0.00, # valor minimo
         max_value=10.00, # valor maximo
         value=1.50, # Valor Inicial

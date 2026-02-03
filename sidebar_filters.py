@@ -21,7 +21,7 @@ def get_filter_selections(df):
     ]
 
     # Renderizar y capturar selecciones
-    st.sidebar.divider()
+    #st.sidebar.divider()
     #st.sidebar.subheader("Filtros")
     for titulo, columna, orden in filtros_selectbox:
         with st.sidebar.popover(titulo, use_container_width=True):

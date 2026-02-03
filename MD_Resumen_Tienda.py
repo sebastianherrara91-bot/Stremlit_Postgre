@@ -11,7 +11,7 @@ import excel_exporter
 import base64
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode, JsCode # Importar AgGrid
 
-def main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_seleccionado):
+def main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_seleccionado, stock_threshold=800):
 
     # --- 1. FILTRO PRINCIPAL POR TIENDA ---
     # Preparar los datos para el filtro de tienda
@@ -259,7 +259,7 @@ def main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_selecci
     if st.button("Generar y Descargar Excel", type="primary"):
         with st.spinner("Generando archivo Excel... Esto puede tardar unos segundos."):
             # Usar el rango de fecha completo para el stock, como se solicitó.
-            df_detalle = GSQL.get_dataframe("Ventas_StockUltsem.sql", params=(fecha_inicio, fecha_fin, fecha_inicio, cliente_seleccionado))
+            df_detalle = GSQL.get_dataframe("Ventas_StockUltsem.sql", params=(fecha_inicio, fecha_fin, fecha_inicio, cliente_seleccionado, stock_threshold))
             
             if not df_detalle.empty:
                 df_filtrado = df_detalle.copy()

@@ -75,7 +75,7 @@ def crear_grafica_barra_doble_horizontal(
         marker_color=bar_color,
         marker_line_color='black',
         marker_line_width=1,
-        hovertemplate=f'<b>%{{y}} %{{customdata[0]}}</b><br><b>% {nombre_barra1}:</b> %{{x:.1f}}% de %{{customdata[2]:.1f}}%<br><b>Unds:</b> %{{customdata[1]:,.0f}} de %{{customdata[3]:,.0f}}<extra></extra>',
+        hovertemplate=f'<b>%{{y}} %{{customdata[0]}}</b><br><b>{nombre_barra1}:</b> %{{x:.1f}}% de %{{customdata[2]:.1f}}%<br><b>Unds:</b> %{{customdata[1]:,.0f}} de %{{customdata[3]:,.0f}}<extra></extra>',
         text=text_1,
         textposition='outside'
     ))
@@ -103,7 +103,7 @@ def crear_grafica_barra_doble_horizontal(
         marker_color=bar_color,
         marker_line_color='black',
         marker_line_width=1,
-        hovertemplate=f'<b>%{{y}} %{{customdata[0]}}</b><br><b>% {nombre_barra2}:</b> %{{x:.1f}}% de %{{customdata[2]:.1f}}%<br><b>Unds:</b> %{{customdata[1]:,.0f}} de %{{customdata[3]:,.0f}}<extra></extra>',
+        hovertemplate=f'<b>%{{y}} %{{customdata[0]}}</b><br><b>{nombre_barra2}:</b> %{{x:.1f}}% de %{{customdata[2]:.1f}}%<br><b>Unds:</b> %{{customdata[1]:,.0f}} de %{{customdata[3]:,.0f}}<extra></extra>',
         text=text_2,
         textposition='outside'
     ))
