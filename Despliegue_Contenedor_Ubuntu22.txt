@@ -78,7 +78,7 @@ aprovechando las correcciones de código que ya están en GitHub.
 1.  **Descargar el código del proyecto:**
     ```bash
     cd /opt
-    git clone https://github.com/sebastianherrara91-bot/DashInco.git
+    git clone https://github.com/sebastianherrara91-bot/Stremlit_Postgre.git DashInco
     ```
 
 2.  **Crear el Archivo de Credenciales (.env):**
@@ -89,11 +89,11 @@ aprovechando las correcciones de código que ya están en GitHub.
     ```
     Dentro del editor `nano`, pega el siguiente contenido, reemplazando con tus credenciales reales:
     ```
-    # Credenciales para la conexión a la base de datos reemplace los datos
-    DB_SERVER=IP del SQL SERVER
-    DB_DATABASE=Nombre de la Base de Datos
-    DB_USER=Usuario de la Base de Datos
-    DB_PASSWORD=Contraseña de la Base de Datos
+    DB_SERVER=186.31.65.250
+    DB_PORT=5432
+    DB_DATABASE=DWH_INCO
+    DB_USER=user_conect
+    DB_PASSWORD=ContraseñaDePostgres
     ```
     Guarda y cierra el archivo (Ctrl+X, luego 'Y', luego Enter).
 
@@ -207,9 +207,12 @@ ________________________________________________________________________________
 
 
 # Comando de actualización estándar
-cd /opt/DashInco && git pull && source venv/bin/activate && pip install -r requirements.txt && deactivate && sudo systemctl restart streamlit.service
+cd /opt/DashInco && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && deactivate && sudo systemctl restart streamlit.service
 
 # ---
 # NUEVO: Comando de actualización COMPLETA (usar si hay problemas con librerías)
 # Este comando borra el entorno virtual y lo recrea para forzar una instalación limpia.
-cd /opt/DashInco && git pull && rm -rf venv && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && deactivate && sudo systemctl restart streamlit.service
+cd /opt/DashInco && git pull origin main && rm -rf venv && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && deactivate && sudo systemctl restart streamlit.service
+
+
+cd /opt/DashInco && git remote set-url origin https://github.com/sebastianherrara91-bot/Stremlit_Postgre.git && git fetch origin && git reset --hard origin/main && rm -rf venv && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && deactivate && sudo systemctl restart streamlit.service
