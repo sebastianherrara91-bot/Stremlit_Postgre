@@ -1,7 +1,7 @@
 WITH params AS (
     SELECT 
-        :ini_cliente::VARCHAR AS ini_cliente,
-        :stock_threshold::INT AS stock_threshold,
+        CAST(:ini_cliente AS VARCHAR) AS ini_cliente,
+        CAST(:stock_threshold AS INT) AS stock_threshold,
         date_trunc('week', current_date)::date AS fecha_corte
 ),
 Valid_Marca_Tipo AS (

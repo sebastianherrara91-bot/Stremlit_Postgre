@@ -1,9 +1,9 @@
 WITH params AS (
     SELECT 
-        :semanas_stock::INT AS semanas_stock,
-        :semanas_venta::INT AS semanas_venta,
-        :ini_cliente::VARCHAR AS ini_cliente,
-        :stock_threshold::INT AS stock_threshold,
+        CAST(:semanas_stock AS INT) AS semanas_stock,
+        CAST(:semanas_venta AS INT) AS semanas_venta,
+        CAST(:ini_cliente AS VARCHAR) AS ini_cliente,
+        CAST(:stock_threshold AS INT) AS stock_threshold,
         (date_trunc('week', current_date) - interval '2 days')::date AS fecha_corte
 ),
 Valid_Marca_Tipo AS (

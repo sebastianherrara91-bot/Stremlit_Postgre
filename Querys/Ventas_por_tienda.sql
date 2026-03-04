@@ -1,10 +1,10 @@
 WITH params AS (
     SELECT 
-        :fecha_inicio::DATE AS fecha_inicio,
-        :fecha_fin::DATE AS fecha_fin,
-        :fecha_inicio_stock::DATE AS fecha_inicio_stock,
-        :ini_cliente::VARCHAR AS ini_cliente,
-        :stock_threshold::INT AS stock_threshold
+        CAST(:fecha_inicio AS DATE) AS fecha_inicio,
+        CAST(:fecha_fin AS DATE) AS fecha_fin,
+        CAST(:fecha_inicio_stock AS DATE) AS fecha_inicio_stock,
+        CAST(:ini_cliente AS VARCHAR) AS ini_cliente,
+        CAST(:stock_threshold AS INT) AS stock_threshold
 ),
 Valid_Marca_Tipo AS (
     SELECT
