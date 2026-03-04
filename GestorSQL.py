@@ -12,39 +12,35 @@ load_dotenv()
 def get_connection():
     # Cargar credenciales desde las variables de entorno
     DB_SERVER = os.getenv("DB_SERVER")
+    DB_PORT = os.getenv("DB_PORT", "5432")
     DB_DATABASE = os.getenv("DB_DATABASE")
     DB_USER = os.getenv("DB_USER")
     DB_PASSWORD = os.getenv("DB_PASSWORD")
 
     # Validar que todas las credenciales se hayan cargado
-    if not all([DB_SERVER, DB_DATABASE, DB_USER, DB_PASSWORD]):
-        st.error("Error de configuración: Faltan una o más credenciales de la base de datos en el archivo .env. Por favor, créelo en el servidor.")
+    if not all([DB_SERVER, DB_PORT, DB_DATABASE, DB_USER, DB_PASSWORD]):
+        st.error("Error de configuración: Faltan una o más credenciales de la base de datos en el archivo .env.")
         return None
 
     quoted_pwd = urllib.parse.quote_plus(DB_PASSWORD)
 
-    # Lista de cadenas de conexión a probar
-    connection_strings_to_try = [
-        (f"mssql+pyodbc://{DB_USER}:{quoted_pwd}@{DB_SERVER}/{DB_DATABASE}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes", "Linux"),
-        (f"mssql+pyodbc://{DB_USER}:{quoted_pwd}@{DB_SERVER}/{DB_DATABASE}?driver=SQL+Server", "Windows")
-    ]
+    # Identificamos el sistema operativo
+    os_name = "Windows" if os.name == "nt" else "Ubuntu/Linux"
 
-    error_messages = []
-    for conn_str, config_type in connection_strings_to_try:
-        try:
-            print(f"Intentando conectar con la configuración de {config_type}...")
-            engine = create_engine(conn_str, connect_args={"timeout": 5})
-            with engine.connect():
-                print(f"¡Conexión exitosa con la configuración de {config_type}!")
-                return engine
-        except Exception as e:
-            error_str = f"Falló el intento con '{config_type}': {e}"
-            print(error_str + "\n")
-            error_messages.append(error_str)
+    # En Postgres no hay tanta dependencia de Driver ODBC, pero manejamos la lógica condicional pedida
+    if os_name == "Windows":
+        conn_str = f"postgresql+psycopg2://{DB_USER}:{quoted_pwd}@{DB_SERVER}:{DB_PORT}/{DB_DATABASE}"
+    else:
+        conn_str = f"postgresql+psycopg2://{DB_USER}:{quoted_pwd}@{DB_SERVER}:{DB_PORT}/{DB_DATABASE}"
 
-    if error_messages:
-        full_error_message = "No se pudo conectar a la base de datos. Se intentaron las siguientes configuraciones:\n\n" + "\n\n".join(error_messages)
-        st.error(full_error_message)
+    try:
+        engine = create_engine(conn_str, connect_args={"connect_timeout": 5})
+        with engine.connect():
+            return engine
+    except Exception as e:
+        error_str = f"Falló el intento de conexión en {os_name}: {e}"
+        print(error_str + "\n")
+        st.error(error_str)
     
     return None
 
@@ -70,10 +66,15 @@ def cargar_consulta_sql(nombre_archivo):
         st.error(f"Error al cargar la consulta SQL: {str(e)}")
         return ""
 
+from sqlalchemy import text
+
 def obtener_datos_desde_sql(conexion, consulta_sql, params=None):
     """Ejecuta una consulta SQL y devuelve un DataFrame"""
     try:
-        return pd.read_sql(consulta_sql, conexion, params=params)
+        if params:
+            return pd.read_sql(text(consulta_sql), conexion, params=params)
+        else:
+            return pd.read_sql(text(consulta_sql), conexion)
     except Exception as e:
         st.error(f"Error al ejecutar la consulta: {str(e)}")
         return pd.DataFrame()

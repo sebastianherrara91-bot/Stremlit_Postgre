@@ -1,16 +1,16 @@
 WITH WeekData AS (
     SELECT DISTINCT
-        SEM.DIA_FIN,
-        SEM.N_SEM
+        SEM.dia_fin,
+        SEM.n_sem
     FROM 
-        [DWH_INCO].[dbo].[DWH_Ventas] VT
+        dbo.dwh_ventas VT
     JOIN
-        [DWH_INCO].[dbo].SEMANAS AS SEM ON CAST(VT.FECHA as date) BETWEEN SEM.DIA_INICIO AND SEM.DIA_FIN
+        dbo.semanas AS SEM ON VT.fecha BETWEEN SEM.dia_inicio AND SEM.dia_fin
 )
 SELECT 
-    FORMAT(DIA_FIN, 'yyyy-MM-dd') + ' Sem ' + FORMAT(N_SEM,'00') AS SemanaFormateada,
-    DIA_FIN AS FinSemana
+    to_char(dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(n_sem, 'FM00') AS "SemanaFormateada",
+    dia_fin AS "FinSemana"
 FROM 
     WeekData
 ORDER BY 
-    DIA_FIN DESC;
+    dia_fin DESC;

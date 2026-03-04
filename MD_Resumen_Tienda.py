@@ -259,7 +259,14 @@ def main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_selecci
     if st.button("Generar y Descargar Excel", type="primary"):
         with st.spinner("Generando archivo Excel... Esto puede tardar unos segundos."):
             # Usar el rango de fecha completo para el stock, como se solicitó.
-            df_detalle = GSQL.get_dataframe("Ventas_StockUltsem.sql", params=(fecha_inicio, fecha_fin, fecha_inicio, cliente_seleccionado, stock_threshold))
+            params_stock_ultsem = {
+                'fecha_inicio_venta': fecha_inicio,
+                'fecha_fin_venta': fecha_fin,
+                'fecha_inicio_stock': fecha_inicio,
+                'ini_cliente': cliente_seleccionado,
+                'stock_threshold': stock_threshold
+            }
+            df_detalle = GSQL.get_dataframe("Ventas_StockUltsem.sql", params=params_stock_ultsem)
             
             if not df_detalle.empty:
                 df_filtrado = df_detalle.copy()

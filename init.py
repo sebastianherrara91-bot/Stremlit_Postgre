@@ -64,14 +64,17 @@ def main():
         fecha_inicio = fecha_fin - pd.Timedelta(weeks=1)
 
     # El cliente seleccionado se añade a todos los parámetros
-    # La mayoría de las queries ahora tienen 4 parámetros: fecha_inicio, fecha_fin, fecha_inicio_stock, y cliente
     if selec == "Resumen por Tienda":
+        fecha_inicio_stock_tienda = fecha_fin - pd.Timedelta(weeks=4) # dummy, adjust below if needed
         fecha_inicio_stock_tienda = fecha_inicio
         fecha_inicio_stock_color_talla = fecha_fin - pd.Timedelta(days=6)
         
-        df_tienda = GSQL.get_dataframe("Ventas_por_tienda.sql", params=(fecha_inicio, fecha_fin, fecha_inicio_stock_tienda, cliente_seleccionado, stock_threshold))
-        df_color = GSQL.get_dataframe("Ventas_por_color.sql", params=(fecha_inicio, fecha_fin, fecha_inicio_stock_color_talla, cliente_seleccionado, stock_threshold))
-        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql", params=(fecha_inicio, fecha_fin, fecha_inicio_stock_color_talla, cliente_seleccionado, stock_threshold))
+        params_tienda = {'fecha_inicio': fecha_inicio, 'fecha_fin': fecha_fin, 'fecha_inicio_stock': fecha_inicio_stock_tienda, 'ini_cliente': cliente_seleccionado, 'stock_threshold': stock_threshold}
+        df_tienda = GSQL.get_dataframe("Ventas_por_tienda.sql", params=params_tienda)
+        
+        params_color_talla = {'fecha_inicio': fecha_inicio, 'fecha_fin': fecha_fin, 'fecha_inicio_stock': fecha_inicio_stock_color_talla, 'ini_cliente': cliente_seleccionado, 'stock_threshold': stock_threshold}
+        df_color = GSQL.get_dataframe("Ventas_por_color.sql", params=params_color_talla)
+        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql", params=params_color_talla)
         
         if not df_tienda.empty and not df_color.empty and not df_talla.empty:
             RT.main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_seleccionado, stock_threshold)
@@ -80,7 +83,8 @@ def main():
 
     elif selec == "Ventas por Color":
         fecha_inicio_stock_color = fecha_fin - pd.Timedelta(days=6)
-        df_color = GSQL.get_dataframe("Ventas_por_color.sql", params=(fecha_inicio, fecha_fin, fecha_inicio_stock_color, cliente_seleccionado, stock_threshold))
+        params_color = {'fecha_inicio': fecha_inicio, 'fecha_fin': fecha_fin, 'fecha_inicio_stock': fecha_inicio_stock_color, 'ini_cliente': cliente_seleccionado, 'stock_threshold': stock_threshold}
+        df_color = GSQL.get_dataframe("Ventas_por_color.sql", params=params_color)
         if not df_color.empty:
             VPC.main(df_color, cliente_seleccionado)
         else:
@@ -88,7 +92,8 @@ def main():
 
     elif selec == "Ventas por Talla":
         fecha_inicio_stock_talla = fecha_fin - pd.Timedelta(days=6)
-        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql", params=(fecha_inicio, fecha_fin, fecha_inicio_stock_talla, cliente_seleccionado, stock_threshold))
+        params_talla = {'fecha_inicio': fecha_inicio, 'fecha_fin': fecha_fin, 'fecha_inicio_stock': fecha_inicio_stock_talla, 'ini_cliente': cliente_seleccionado, 'stock_threshold': stock_threshold}
+        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql", params=params_talla)
         if not df_talla.empty:
             VPT.main(df_talla, cliente_seleccionado)
         else:
@@ -100,7 +105,8 @@ def main():
     elif selec == "Ventas Semanas Año":
         st.sidebar.markdown("---")
         semanas = st.sidebar.number_input("Semanas a Analizar", min_value=1, value=4, step=1)
-        df_sem_ano = GSQL.get_dataframe("Ventas_Sem_Ano.sql", params=(semanas, semanas, cliente_seleccionado, stock_threshold))
+        params_sem_ano = {'semanas_stock': semanas, 'semanas_venta': semanas, 'ini_cliente': cliente_seleccionado, 'stock_threshold': stock_threshold}
+        df_sem_ano = GSQL.get_dataframe("Ventas_Sem_Ano.sql", params=params_sem_ano)
         if not df_sem_ano.empty:
             VSA.main(df_sem_ano)
         else:

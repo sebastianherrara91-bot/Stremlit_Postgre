@@ -1,213 +1,213 @@
-DECLARE @fecha_inicio_venta DATE = ?;
-DECLARE @fecha_fin_venta DATE = ?;
-DECLARE @fecha_inicio_stock DATE = ?;
-DECLARE @ini_cliente VARCHAR(10) = ?;
-DECLARE @stock_threshold INT = ?; -- Parametro umbral stock
-
-
-;WITH Valid_Marca_Tipo AS (
+WITH params AS (
+    SELECT 
+        :fecha_inicio_venta::DATE AS fecha_inicio_venta,
+        :fecha_fin_venta::DATE AS fecha_fin_venta,
+        :fecha_inicio_stock::DATE AS fecha_inicio_stock,
+        :ini_cliente::VARCHAR AS ini_cliente,
+        :stock_threshold::INT AS stock_threshold
+),
+Valid_Marca_Tipo AS (
     SELECT
         CASE
-            WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090103' THEN 'YAMP B'
-            WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090303' THEN 'YAMP G'
-            WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090504' THEN 'YAMP BEBA'
-            WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090503' THEN 'YAMP BEBO'
-            ELSE ISNULL(MA.NEW_MARCA, EC.MARCA )
-        END AS 'Marca',
-        M.TIPO AS 'Tipo_Programa',
-        M.FIT AS 'Fit_Estilo'
-    FROM [DWH_INCO].[dbo].DWH_Stock AS ST
-    LEFT JOIN [DWH_INCO].[dbo].[CAT_SKU] AS EC ON ST.EAN = EC.EAN
-    LEFT JOIN [DWH_INCO].[dbo].[MONITOREO] AS M ON EC.REF_MODELO = M.MODELO and  EC.MARCA = M.MARCA
-    LEFT JOIN [DWH_INCO].[dbo].MARCA AS MA ON EC.MARCA = MA.MARCA_BD
-    LEFT JOIN [DWH_INCO].[dbo].TIENDAS AS T ON ST.NUM_LOCAL = T.CODIGO
-    WHERE ST.INI_CLIENTE = @ini_cliente
-      AND T.TIPO = 'TIENDA'
-      AND ST.FECHA = @fecha_fin_venta
+            WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
+            WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
+            WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
+            WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
+            ELSE COALESCE(MA.new_marca, EC.marca )
+        END AS "Marca",
+        M.tipo AS "Tipo_Programa",
+        M.fit AS "Fit_Estilo"
+    FROM dbo.dwh_stock AS ST
+    CROSS JOIN params P
+    LEFT JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
+    LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo and EC.marca = M.marca
+    LEFT JOIN dbo.marca AS MA ON EC.marca = MA.marca_bd
+    LEFT JOIN dbo.tiendas AS T ON ST.num_local = T.codigo
+    WHERE ST.ini_cliente = P.ini_cliente
+      AND T.tipo = 'TIENDA'
+      AND ST.fecha = P.fecha_fin_venta
     GROUP BY
         CASE
-            WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090103' THEN 'YAMP B'
-            WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090303' THEN 'YAMP G'
-            WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090504' THEN 'YAMP BEBA'
-            WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090503' THEN 'YAMP BEBO'
-            ELSE ISNULL(MA.NEW_MARCA, EC.MARCA )
+            WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
+            WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
+            WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
+            WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
+            ELSE COALESCE(MA.new_marca, EC.marca )
         END,
-        M.TIPO,
-        M.FIT
-    HAVING SUM(ST.CANT) >= @stock_threshold
+        M.tipo,
+        M.fit
+    HAVING SUM(ST.cant) >= MAX(P.stock_threshold)
 )
 
 Select
-syv.INI_CLIENTE AS 'Ini_Cliente'
-,syv.C_L
-,syv.[LOCAL] AS 'Local'
-,syv.Ciudad
-,syv.L_Tipo
-,syv.CURVA as 'Curva'
-,syv.EAN
-,syv.SKU
-,syv.[Desc Agrupacion]
-,syv.Modelo
-,syv.Marca
-,syv.Subclase
-,syv.Tipo_Programa
-,syv.FIT as 'Fit_Estilo'
-,syv.COD_COLOR as 'C_Color'
-,syv.COLOR_XXXX
-,syv.COLOR
-,syv.Color_Hexa
-,syv.TIPO_COLOR
-,syv.Talla as 'Talla'
-,syv.Fecha
-,CONCAT(FORMAT(syv.fecha,'yy'),'/',FORMAT(syv.N_sem,'00'),' - ',FORMAT(syv.Fecha, 'MM/dd')) as 'Semanas'
-,syv.N_Sem
-,syv.Ano
-,SUM(syv.CANT) as 'Cant_Venta'
-,SUM(syv.STOCK) as 'Cant_Stock'
-,'PVP_Prom' = CASE WHEN SUM(syv.CANT) = 0 THEN NULL ELSE ROUND(SUM(syv.CANT * syv.PVP_UNIT)/ SUM(syv.CANT),0) END
+    syv.ini_cliente AS "Ini_Cliente",
+    syv.c_l AS "C_L",
+    syv.local AS "Local",
+    syv.ciudad AS "Ciudad",
+    syv.l_tipo AS "L_Tipo",
+    syv.curva as "Curva",
+    syv.ean AS "EAN",
+    syv.sku AS "SKU",
+    syv.desc_agrupacion AS "Desc Agrupacion",
+    syv.modelo AS "Modelo",
+    syv.marca AS "Marca",
+    syv.subclase AS "Subclase",
+    syv.tipo_programa AS "Tipo_Programa",
+    syv.fit_estilo as "Fit_Estilo",
+    syv.c_color as "C_Color",
+    syv.color_xxxx AS "COLOR_XXXX",
+    syv.color AS "COLOR",
+    syv.color_hexa AS "Color_Hexa",
+    syv.tipo_color AS "TIPO_COLOR",
+    syv.talla as "Talla",
+    syv.fecha AS "Fecha",
+    to_char(syv.fecha, 'YY') || '/' || to_char(syv.n_sem, 'FM00') || ' - ' || to_char(syv.fecha, 'MM/DD') as "Semanas",
+    syv.n_sem AS "N_Sem",
+    syv.ano AS "Ano",
+    SUM(syv.cant) as "Cant_Venta",
+    SUM(syv.stock) as "Cant_Stock",
+    CASE WHEN SUM(syv.cant) = 0 THEN NULL ELSE ROUND(SUM(syv.cant * syv.pvp_unit)/ SUM(syv.cant),0) END as "PVP_Prom"
 
 From(
 
 SELECT
--- BASE DE DATOS STOCK
-ST.INI_CLIENTE
-,ST.NUM_LOCAL AS 'C_L'
-,T.LOCAL AS 'Local'
-,T.CIUDAD AS 'Ciudad'
-,T.TIPO AS 'L_Tipo'
-,T.CURVA
-,ST.EAN
-,EC.SKU
-,EC.MODELO_AGRUPACION AS 'Desc Agrupacion'
-,EC.REF_MODELO AS 'Modelo'
-,CASE 
-WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090103' THEN 'YAMP B'
-WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090303' THEN 'YAMP G'
-WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090504' THEN 'YAMP BEBA'
-WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090503' THEN 'YAMP BEBO'
-ELSE ISNULL(MA.NEW_MARCA, EC.MARCA )
-END  AS 'Marca'
-,SUBSTRING(EC.CATEGORIA,1,7) AS 'Subclase'
-,M.TIPO AS 'Tipo_Programa'
-,M.FIT
-,EC.COD_COLOR 
-,CO.COLOR_XXXX
-,CO.COLOR
-,CO.Color_Hexa
-,CO.TIPO_COLOR
-,EC.TALLA 
-,DATEADD(day,1 -DATEPART(WEEKDAY,ST.FECHA),CAST(ST.FECHA as date)) AS 'Fecha'
-,SEM.N_SEM as 'N_Sem'
-,SEM.ANO as 'Ano'
-,NULL AS CANT
-,ST.CANT AS 'STOCK'
-,NULL AS 'PVP_UNIT'
- 
-FROM [DWH_INCO].[dbo].DWH_Stock AS ST
-
-LEFT JOIN [DWH_INCO].[dbo].[CAT_SKU] AS EC ON ST.EAN = EC.EAN
-LEFT JOIN [DWH_INCO].[dbo].[MONITOREO] AS M ON EC.REF_MODELO = M.MODELO and  EC.MARCA = M.MARCA
-LEFT JOIN [DWH_INCO].[dbo].[COD_COLOR] as CO on EC.COD_COLOR = CO.CODIGO
-LEFT JOIN [DWH_INCO].[dbo].TIENDAS AS T ON ST.NUM_LOCAL = T.CODIGO
-LEFT JOIN [DWH_INCO].[dbo].MARCA AS MA ON EC.MARCA = MA.MARCA_BD
-LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,ST.FECHA),CAST(ST.FECHA as date)) = SEM.DIA_INICIO
-INNER JOIN Valid_Marca_Tipo VMT ON VMT.Marca = (
+    -- BASE DE DATOS STOCK
+    ST.ini_cliente AS ini_cliente,
+    ST.num_local AS c_l,
+    T.local AS local,
+    T.ciudad AS ciudad,
+    T.tipo AS l_tipo,
+    T.curva AS curva,
+    ST.ean AS ean,
+    EC.sku AS sku,
+    EC.modelo_agrupacion AS desc_agrupacion,
+    EC.ref_modelo AS modelo,
     CASE 
-        WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090103' THEN 'YAMP B'
-        WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090303' THEN 'YAMP G'
-        WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090504' THEN 'YAMP BEBA'
-        WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090503' THEN 'YAMP BEBO'
-        ELSE ISNULL(MA.NEW_MARCA, EC.MARCA )
+        WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
+        WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
+        WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
+        WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
+        ELSE COALESCE(MA.new_marca, EC.marca )
+    END  AS marca,
+    substr(EC.categoria,1,7) AS subclase,
+    M.tipo AS tipo_programa,
+    M.fit AS fit_estilo,
+    EC.cod_color AS c_color,
+    CO.color_xxxx AS color_xxxx,
+    CO.color AS color,
+    CO.color_hexa AS color_hexa,
+    CO.tipo_color AS tipo_color,
+    EC.talla AS talla,
+    date_trunc('week', ST.fecha)::date AS fecha,
+    SEM.n_sem as n_sem,
+    SEM.ano as ano,
+    0 AS cant,
+    ST.cant AS stock,
+    0 AS pvp_unit
+ 
+FROM dbo.dwh_stock AS ST
+CROSS JOIN params P
+LEFT JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
+LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo and EC.marca = M.marca
+LEFT JOIN dbo.cod_color as CO on EC.cod_color = CO.codigo
+LEFT JOIN dbo.tiendas AS T ON ST.num_local = T.codigo
+LEFT JOIN dbo.marca AS MA ON EC.marca = MA.marca_bd
+LEFT JOIN dbo.semanas AS SEM ON date_trunc('week', ST.fecha)::date = SEM.dia_inicio
+INNER JOIN Valid_Marca_Tipo VMT ON VMT."Marca" = (
+    CASE 
+        WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
+        WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
+        WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
+        WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
+        ELSE COALESCE(MA.new_marca, EC.marca )
     END 
-) AND VMT.Tipo_Programa = M.TIPO AND ISNULL(VMT.Fit_Estilo,'') = ISNULL(M.FIT,'')
+) AND VMT."Tipo_Programa" = M.tipo AND COALESCE(VMT."Fit_Estilo",'') = COALESCE(M.fit,'')
 
-WHERE ST.INI_CLIENTE = @ini_cliente and T.TIPO = 'TIENDA' 
-and st.FECHA between @fecha_inicio_stock and @fecha_fin_venta
+WHERE ST.ini_cliente = P.ini_cliente and T.tipo = 'TIENDA' 
+and st.fecha between P.fecha_inicio_stock and P.fecha_fin_venta
 
-UNION all
+UNION ALL
 
 SELECT
--- BASE DE DATOS VENTAS
-VT.INI_CLIENTE
-,VT.NUM_LOCAL AS 'C_L'
-,T.LOCAL AS 'Local'
-,T.CIUDAD AS 'Ciudad'
-,T.TIPO AS 'L_Tipo'
-,T.CURVA
-,VT.EAN
-,EC.SKU
-,EC.MODELO_AGRUPACION AS 'Desc Agrupacion'
-,EC.REF_MODELO AS 'Modelo'
-,CASE 
-WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090103' THEN 'YAMP B'
-WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090303' THEN 'YAMP G'
-WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090504' THEN 'YAMP BEBA'
-WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090503' THEN 'YAMP BEBO'
-ELSE ISNULL(MA.NEW_MARCA, EC.MARCA )
-END  AS 'Marca'
-
-,SUBSTRING(EC.CATEGORIA,1,7) AS 'Subclase'
-,M.TIPO AS 'Tipo_Programa'
-,M.FIT
-,EC.COD_COLOR 
-,CO.COLOR_XXXX
-,CO.COLOR
-,CO.Color_Hexa
-,CO.TIPO_COLOR
-,EC.TALLA
-,DATEADD(day,1 -DATEPART(WEEKDAY,VT.FECHA),CAST(VT.FECHA as date)) AS 'Fecha'
-,SEM.N_SEM
-,SEM.ANO
-,VT.CANT as CANT
-,0 AS STOCK
-,NULLIF(VT.PVP_UNIT,0) as 'PVP_UNIT'
- 
-FROM [DWH_INCO].[dbo].[DWH_Ventas] VT
-
-LEFT JOIN [DWH_INCO].[dbo].[CAT_SKU] AS EC ON VT.EAN = EC.EAN
-LEFT JOIN [DWH_INCO].[dbo].[COD_COLOR] as CO on EC.COD_COLOR = CO.CODIGO
-LEFT JOIN [DWH_INCO].[dbo].[MONITOREO] AS M ON EC.REF_MODELO = M.MODELO and  EC.MARCA = M.MARCA
-LEFT JOIN [DWH_INCO].[dbo].TIENDAS AS T ON VT.NUM_LOCAL = T.CODIGO
-LEFT JOIN [DWH_INCO].[dbo].MARCA AS MA ON EC.MARCA = MA.MARCA_BD
-LEFT JOIN [DWH_INCO].[dbo].SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,VT.FECHA),CAST(VT.FECHA as date)) = SEM.DIA_INICIO
-INNER JOIN Valid_Marca_Tipo VMT ON VMT.Marca = (
+    -- BASE DE DATOS VENTAS
+    VT.ini_cliente AS ini_cliente,
+    VT.num_local AS c_l,
+    T.local AS local,
+    T.ciudad AS ciudad,
+    T.tipo AS l_tipo,
+    T.curva AS curva,
+    VT.ean AS ean,
+    EC.sku AS sku,
+    EC.modelo_agrupacion AS desc_agrupacion,
+    EC.ref_modelo AS modelo,
     CASE 
-        WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090103' THEN 'YAMP B'
-        WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090303' THEN 'YAMP G'
-        WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090504' THEN 'YAMP BEBA'
-        WHEN SUBSTRING(EC.CATEGORIA,1,7) = 'J090503' THEN 'YAMP BEBO'
-        ELSE ISNULL(MA.NEW_MARCA, EC.MARCA )
+        WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
+        WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
+        WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
+        WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
+        ELSE COALESCE(MA.new_marca, EC.marca )
+    END  AS marca,
+    substr(EC.categoria,1,7) AS subclase,
+    M.tipo AS tipo_programa,
+    M.fit AS fit_estilo,
+    EC.cod_color AS c_color,
+    CO.color_xxxx AS color_xxxx,
+    CO.color AS color,
+    CO.color_hexa AS color_hexa,
+    CO.tipo_color AS tipo_color,
+    EC.talla AS talla,
+    date_trunc('week', VT.fecha)::date AS fecha,
+    SEM.n_sem as n_sem,
+    SEM.ano as ano,
+    VT.cant as cant,
+    0 AS stock,
+    NULLIF(VT.pvp_unit,0) as pvp_unit
+ 
+FROM dbo.dwh_ventas VT
+CROSS JOIN params P
+LEFT JOIN dbo.cat_sku AS EC ON VT.ean = EC.ean
+LEFT JOIN dbo.cod_color as CO on EC.cod_color = CO.codigo
+LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo and EC.marca = M.marca
+LEFT JOIN dbo.tiendas AS T ON VT.num_local = T.codigo
+LEFT JOIN dbo.marca AS MA ON EC.marca = MA.marca_bd
+LEFT JOIN dbo.semanas AS SEM ON date_trunc('week', VT.fecha)::date = SEM.dia_inicio
+INNER JOIN Valid_Marca_Tipo VMT ON VMT."Marca" = (
+    CASE 
+        WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
+        WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
+        WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
+        WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
+        ELSE COALESCE(MA.new_marca, EC.marca )
     END 
-) AND VMT.Tipo_Programa = M.TIPO AND ISNULL(VMT.Fit_Estilo,'') = ISNULL(M.FIT,'')
+) AND VMT."Tipo_Programa" = M.tipo AND COALESCE(VMT."Fit_Estilo",'') = COALESCE(M.fit,'')
 
-WHERE VT.INI_CLIENTE = @ini_cliente and T.TIPO = 'TIENDA' 
-and VT.FECHA between @fecha_inicio_venta and @fecha_fin_venta
---Where VT.INI_CLIENTE = 'FL' and VT.FECHA between '20230901' and '20240730'
+WHERE VT.ini_cliente = P.ini_cliente and T.tipo = 'TIENDA' 
+and VT.fecha between P.fecha_inicio_venta and P.fecha_fin_venta
 
 ) as syv
 
 GROUP BY
-syv.INI_CLIENTE
-,syv.C_L
-,syv.[LOCAL]
-,syv.Ciudad
-,syv.L_Tipo
-,syv.CURVA
-,syv.EAN
-,syv.SKU
-,syv.[Desc Agrupacion]
-,syv.Modelo
-,syv.Marca
-,syv.Subclase
-,syv.Tipo_Programa
-,syv.FIT
-,syv.COD_COLOR
-,syv.COLOR_XXXX
-,syv.COLOR
-,syv.Color_Hexa
-,syv.TIPO_COLOR
-,syv.TALLA
-,syv.Fecha
-,CONCAT(FORMAT(syv.fecha,'yy'),'/',FORMAT(syv.N_sem,'00'),' - ',FORMAT(syv.Fecha, 'MM/dd'))
-,syv.N_SEM
-,syv.ANO
+    syv.ini_cliente,
+    syv.c_l,
+    syv.local,
+    syv.ciudad,
+    syv.l_tipo,
+    syv.curva,
+    syv.ean,
+    syv.sku,
+    syv.desc_agrupacion,
+    syv.modelo,
+    syv.marca,
+    syv.subclase,
+    syv.tipo_programa,
+    syv.fit_estilo,
+    syv.c_color,
+    syv.color_xxxx,
+    syv.color,
+    syv.color_hexa,
+    syv.tipo_color,
+    syv.talla,
+    syv.fecha,
+    to_char(syv.fecha, 'YY') || '/' || to_char(syv.n_sem, 'FM00') || ' - ' || to_char(syv.fecha, 'MM/DD'),
+    syv.n_sem,
+    syv.ano;

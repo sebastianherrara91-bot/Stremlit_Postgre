@@ -1,8 +1,8 @@
-SELECT [INI_CLIENTE]
-      ,[N_LOCAL]
-      ,[LOCAL]
-      ,[CIUDAD] 
-      ,[TIPO]
-      ,[CURVA]
-      ,[CODIGO]
-  FROM [DWH_INCO].[dbo].[TIENDAS]
+SELECT ini_cliente AS "INI_CLIENTE"
+      ,n_local AS "N_LOCAL"
+      ,local AS "LOCAL"
+      ,ciudad AS "CIUDAD"
+      ,tipo AS "TIPO"
+      ,curva AS "CURVA"
+      ,codigo AS "CODIGO"
+  FROM dbo.tiendas
