@@ -70,11 +70,26 @@ def main():
         fecha_inicio_stock_color_talla = fecha_fin - pd.Timedelta(days=6)
         
         params_tienda = {'fecha_inicio': fecha_inicio, 'fecha_fin': fecha_fin, 'fecha_inicio_stock': fecha_inicio_stock_tienda, 'ini_cliente': cliente_seleccionado, 'stock_threshold': stock_threshold}
-        df_tienda = GSQL.get_dataframe("Ventas_por_tienda.sql", params=params_tienda)
         
         params_color_talla = {'fecha_inicio': fecha_inicio, 'fecha_fin': fecha_fin, 'fecha_inicio_stock': fecha_inicio_stock_color_talla, 'ini_cliente': cliente_seleccionado, 'stock_threshold': stock_threshold}
-        df_color = GSQL.get_dataframe("Ventas_por_color.sql", params=params_color_talla)
-        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql", params=params_color_talla)
+        
+        import concurrent.futures
+        from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
+        ctx = get_script_run_ctx()
+        
+        def get_df_threaded(query_name, params_dict):
+            if ctx:
+                add_script_run_ctx(ctx=ctx)
+            return GSQL.get_dataframe(query_name, params=params_dict)
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_tienda = executor.submit(get_df_threaded, "Ventas_por_tienda.sql", params_tienda)
+            future_color = executor.submit(get_df_threaded, "Ventas_por_color.sql", params_color_talla)
+            future_talla = executor.submit(get_df_threaded, "Ventas_por_talla.sql", params_color_talla)
+            
+            df_tienda = future_tienda.result()
+            df_color = future_color.result()
+            df_talla = future_talla.result()
         
         if not df_tienda.empty and not df_color.empty and not df_talla.empty:
             RT.main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_seleccionado, stock_threshold)
