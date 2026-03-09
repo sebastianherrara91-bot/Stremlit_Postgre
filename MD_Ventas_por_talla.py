@@ -75,7 +75,7 @@ def main(DataF, cliente_seleccionado):
         Columna_Actual = columnas[indice % 3]
         with Columna_Actual:
             df_local = df_filtroTL[df_filtroTL['Local'] == local[0]].copy()
-            df_local = df_local.groupby(['Talla'],observed=False).agg({'Cant_Venta': 'sum', 'Cant_Stock': 'sum'}).reset_index()
+            df_local = df_local.groupby(['Talla'], observed=False).agg({'Cant_Venta': 'sum', 'Cant_Stock': 'sum'}).reset_index()
             T_Venta = df_local['Cant_Venta'].sum()
             T_Stock = df_local['Cant_Stock'].sum()
             df_local['%_Participacion_Venta'] = (df_local['Cant_Venta'] / T_Venta) * 100 if T_Venta else 0

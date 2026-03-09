@@ -81,12 +81,6 @@ def obtener_datos_desde_sql(conexion, consulta_sql, params=None):
             df = pd.read_sql(text(consulta_sql), conexion, params=params)
         else:
             df = pd.read_sql(text(consulta_sql), conexion)
-            
-        # Optimizar memoria convirtiendo object/strings a category
-        for col in df.columns:
-            if df[col].dtype == 'object':
-                df[col] = df[col].astype('category')
-                
         return df
     except Exception as e:
         st.error(f"Error al ejecutar la consulta: {str(e)}")

@@ -17,7 +17,7 @@ def main(DataF, cliente_seleccionado):
 
     # Inicio de los cálculos de participación para el gráfico___________________________________________________________________________________________________________
     
-    df_calculos = df_filtrado.groupby(['COLOR','Color_Hexa','C_Color'],dropna=False).agg({'Cant_Venta': 'sum','Cant_Stock': 'sum'}).reset_index()
+    df_calculos = df_filtrado.groupby(['COLOR','Color_Hexa','C_Color'], dropna=False).agg({'Cant_Venta': 'sum','Cant_Stock': 'sum'}).reset_index()
     df_calculos['Total_Unidades'] = df_calculos['Cant_Venta'] + df_calculos['Cant_Stock']
     total_unidades_global = df_calculos['Total_Unidades'].sum()
     df_calculos['%_Participacion_Total'] = (df_calculos['Total_Unidades'] / total_unidades_global) * 100 if total_unidades_global else None
@@ -35,7 +35,7 @@ def main(DataF, cliente_seleccionado):
     df_calculos = df_calculos[df_calculos['%_Participacion_Total'] >= slider]
     Colores = df_calculos['COLOR'].unique().tolist()
     
-    df_ParaFor = df_filtrado.groupby(['C_L','Local','Ciudad','COLOR','Color_Hexa','C_Color'],dropna=False).agg({'Cant_Venta': 'sum','Cant_Stock': 'sum'}).reset_index()
+    df_ParaFor = df_filtrado.groupby(['C_L','Local','Ciudad','COLOR','Color_Hexa','C_Color'], dropna=False).agg({'Cant_Venta': 'sum','Cant_Stock': 'sum'}).reset_index()
     df_ParaFor = df_ParaFor[df_ParaFor['COLOR'].isin(Colores)]
 
     Locales = df_ParaFor[['Local', 'Ciudad']].drop_duplicates().sort_values(by=['Ciudad', 'Local']).values.tolist()
