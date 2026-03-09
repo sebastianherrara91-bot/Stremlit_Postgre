@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 # Cargar las variables de entorno desde el archivo .env
 load_dotenv()
 
+@st.cache_resource(show_spinner=False)
 def get_connection():
     # Cargar credenciales desde las variables de entorno
     DB_SERVER = os.getenv("DB_SERVER")
@@ -34,7 +35,12 @@ def get_connection():
         conn_str = f"postgresql+psycopg2://{DB_USER}:{quoted_pwd}@{DB_SERVER}:{DB_PORT}/{DB_DATABASE}"
 
     try:
-        engine = create_engine(conn_str, connect_args={"connect_timeout": 5})
+        engine = create_engine(
+            conn_str, 
+            connect_args={"connect_timeout": 5, "options": "-c search_path=dbo,public"},
+            pool_size=15,
+            max_overflow=20
+        )
         with engine.connect():
             return engine
     except Exception as e:
@@ -72,9 +78,16 @@ def obtener_datos_desde_sql(conexion, consulta_sql, params=None):
     """Ejecuta una consulta SQL y devuelve un DataFrame"""
     try:
         if params:
-            return pd.read_sql(text(consulta_sql), conexion, params=params)
+            df = pd.read_sql(text(consulta_sql), conexion, params=params)
         else:
-            return pd.read_sql(text(consulta_sql), conexion)
+            df = pd.read_sql(text(consulta_sql), conexion)
+            
+        # Optimizar memoria convirtiendo object/strings a category
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                df[col] = df[col].astype('category')
+                
+        return df
     except Exception as e:
         st.error(f"Error al ejecutar la consulta: {str(e)}")
         return pd.DataFrame()

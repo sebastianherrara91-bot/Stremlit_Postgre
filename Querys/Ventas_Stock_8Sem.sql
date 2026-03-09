@@ -32,7 +32,8 @@ FROM (
     FROM dbo.dwh_stock ST
     INNER JOIN dbo.cat_sku EC ON ST.ean = EC.ean
     INNER JOIN dbo.tiendas T ON ST.num_local = T.codigo AND T.tipo = 'TIENDA'
-    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = (SELECT tipo FROM dbo.monitoreo WHERE modelo = EC.ref_modelo AND marca = EC.marca LIMIT 1)
+    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo
     LEFT JOIN dbo.semanas SEM ON (date_trunc('week', ST.fecha))::date = SEM.dia_inicio
     WHERE ST.ini_cliente = :ini_cliente 
       AND ST.fecha BETWEEN ((date_trunc('week', current_date))::date - interval '8 weeks')::date AND (date_trunc('week', current_date))::date
@@ -47,7 +48,8 @@ FROM (
     FROM dbo.dwh_ventas VT
     INNER JOIN dbo.cat_sku EC ON VT.ean = EC.ean
     INNER JOIN dbo.tiendas T ON VT.num_local = T.codigo AND T.tipo = 'TIENDA'
-    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = (SELECT tipo FROM dbo.monitoreo WHERE modelo = EC.ref_modelo AND marca = EC.marca LIMIT 1)
+    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo
     LEFT JOIN dbo.semanas SEM ON (date_trunc('week', VT.fecha))::date = SEM.dia_inicio
     WHERE VT.ini_cliente = :ini_cliente 
       AND VT.fecha BETWEEN ((date_trunc('week', current_date))::date - interval '8 weeks')::date AND (date_trunc('week', current_date))::date
