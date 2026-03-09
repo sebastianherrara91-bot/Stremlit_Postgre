@@ -1,42 +1,22 @@
-WITH params AS (
-    SELECT 
-        CAST(:fecha_inicio AS DATE) AS fecha_inicio,
-        CAST(:fecha_fin AS DATE) AS fecha_fin,
-        CAST(:fecha_inicio_stock AS DATE) AS fecha_inicio_stock,
-        CAST(:ini_cliente AS VARCHAR) AS ini_cliente,
-        CAST(:stock_threshold AS INT) AS stock_threshold
-),
-Valid_Marca_Tipo AS (
+WITH Valid_Marca_Tipo AS (
+    -- Paso 1: Filtro de productos con stock suficiente
     SELECT
-        CASE
-            WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
-            WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
-            WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
-            WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
-            ELSE COALESCE(MA.new_marca, EC.marca )
-        END AS "Marca",
-        M.tipo AS "Tipo_Programa",
-        M.fit AS "Fit_Estilo"
+        COALESCE(MS.marca, MA.new_marca, EC.marca) AS vmt_marca,
+        M.tipo AS vmt_tipo,
+        M.fit AS vmt_fit
     FROM dbo.dwh_stock AS ST
-    CROSS JOIN params P
-    LEFT JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
-    LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo and EC.marca = M.marca
+    INNER JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
+    LEFT JOIN dbo.marca_subclase AS MS 
+        ON ST.ini_cliente = MS.ini_cliente 
+        AND substring(EC.categoria from 1 for 7) = MS.subcategoria
+    LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
     LEFT JOIN dbo.marca AS MA ON EC.marca = MA.marca_bd
     LEFT JOIN dbo.tiendas AS T ON ST.num_local = T.codigo
-    WHERE ST.ini_cliente = P.ini_cliente
+    WHERE ST.ini_cliente = :ini_cliente
+      AND ST.fecha = :fecha_fin -- Pruning al cuatrimestre final
       AND T.tipo = 'TIENDA'
-      AND ST.fecha = P.fecha_fin
-    GROUP BY
-        CASE
-            WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
-            WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
-            WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
-            WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
-            ELSE COALESCE(MA.new_marca, EC.marca )
-        END,
-        M.tipo,
-        M.fit
-    HAVING SUM(ST.cant) >= MAX(P.stock_threshold)
+    GROUP BY 1, 2, 3
+    HAVING SUM(ST.cant) >= :stock_threshold
 )
 
 SELECT
@@ -48,95 +28,56 @@ SELECT
     syv.tipo_programa AS "Tipo_Programa",
     syv.fit_estilo AS "Fit_Estilo",
     syv.semanas AS "Semanas",
-    SUM(syv.cant_venta) as "Cant_Venta",
-    SUM(syv.cant_stock) as "Cant_Stock",
-    ROUND(CASE WHEN SUM(syv.cant_venta) = 0 THEN 0 ELSE SUM(syv.pvp_x_venta) / SUM(syv.cant_venta) END, 0) as "PVP_Prom"
+    SUM(syv.cant_v) AS "Cant_Venta",
+    SUM(syv.cant_s) AS "Cant_Stock",
+    -- PVP Promedio Ponderado
+    ROUND(CASE 
+        WHEN SUM(syv.cant_v) = 0 THEN 0 
+        ELSE SUM(syv.pvp_total) / NULLIF(SUM(syv.cant_v), 0) 
+    END, 0) AS "PVP_Prom"
 FROM (
+    -- Bloque Stock
     SELECT
-        ST.ini_cliente AS ini_cliente,
-        ST.num_local AS c_l,
-        T.local AS local,
-        T.ciudad AS ciudad,
-        CASE
-            WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
-            WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
-            WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
-            WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
-            ELSE COALESCE(MA.new_marca, EC.marca )
-        END AS marca,
-        M.tipo AS tipo_programa,
-        M.fit AS fit_estilo,
-        to_char(SEM.dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(SEM.n_sem, 'FM00') as semanas,
-        0 AS cant_venta,
-        ST.cant AS cant_stock,
-        0 AS pvp_x_venta -- No aplica para stock
-    FROM dbo.dwh_stock AS ST
-    CROSS JOIN params P
-    LEFT JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
-    LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo and EC.marca = M.marca
-    LEFT JOIN dbo.tiendas AS T ON ST.num_local = T.codigo
-    LEFT JOIN dbo.marca AS MA ON EC.marca = MA.marca_bd
-    LEFT JOIN dbo.semanas AS SEM ON ST.fecha BETWEEN SEM.dia_inicio AND SEM.dia_fin
-    INNER JOIN Valid_Marca_Tipo VMT ON VMT."Marca" = (
-        CASE
-            WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
-            WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
-            WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
-            WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
-            ELSE COALESCE(MA.new_marca, EC.marca )
-        END
-    ) AND VMT."Tipo_Programa" = M.tipo AND COALESCE(VMT."Fit_Estilo",'') = COALESCE(M.fit,'')
-
-    WHERE ST.ini_cliente = P.ini_cliente and T.tipo = 'TIENDA'
-    and ST.fecha between P.fecha_inicio_stock and P.fecha_fin
+        ST.ini_cliente, ST.num_local AS c_l, T.local, T.ciudad,
+        VMT.vmt_marca AS marca, VMT.vmt_tipo AS tipo_programa, VMT.vmt_fit AS fit_estilo,
+        to_char(SEM.dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(SEM.n_sem, 'FM00') AS semanas,
+        0 AS cant_v, ST.cant AS cant_s, 0 AS pvp_total
+    FROM dbo.dwh_stock ST
+    INNER JOIN dbo.cat_sku EC ON ST.ean = EC.ean
+    INNER JOIN dbo.tiendas T ON ST.num_local = T.codigo AND T.tipo = 'TIENDA'
+    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo 
+        AND VMT.vmt_fit IS NOT DISTINCT FROM M.fit
+        AND VMT.vmt_marca = COALESCE(
+            (SELECT marca FROM dbo.marca_subclase WHERE ini_cliente = ST.ini_cliente AND subcategoria = substring(EC.categoria from 1 for 7) LIMIT 1),
+            (SELECT new_marca FROM dbo.marca WHERE marca_bd = EC.marca LIMIT 1),
+            EC.marca
+        )
+    LEFT JOIN dbo.semanas SEM ON ST.fecha BETWEEN SEM.dia_inicio AND SEM.dia_fin
+    WHERE ST.ini_cliente = :ini_cliente 
+      AND ST.fecha BETWEEN :fecha_inicio_stock AND :fecha_fin
 
     UNION ALL
 
+    -- Bloque Ventas
     SELECT
-        VT.ini_cliente AS ini_cliente,
-        VT.num_local AS c_l,
-        T.local AS local,
-        T.ciudad AS ciudad,
-        CASE
-            WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
-            WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
-            WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
-            WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
-            ELSE COALESCE(MA.new_marca, EC.marca )
-        END AS marca,
-        M.tipo AS tipo_programa,
-        M.fit AS fit_estilo,
-        to_char(SEM.dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(SEM.n_sem, 'FM00') as semanas,
-        VT.cant as cant_venta,
-        0 AS cant_stock,
-        VT.cant * NULLIF(VT.pvp_unit,0) as pvp_x_venta -- Pre-calculamos el total para el promedio ponderado
+        VT.ini_cliente, VT.num_local AS c_l, T.local, T.ciudad,
+        VMT.vmt_marca AS marca, VMT.vmt_tipo AS tipo_programa, VMT.vmt_fit AS fit_estilo,
+        to_char(SEM.dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(SEM.n_sem, 'FM00') AS semanas,
+        VT.cant AS cant_v, 0 AS cant_s, (VT.cant * VT.pvp_unit) AS pvp_total
     FROM dbo.dwh_ventas VT
-    CROSS JOIN params P
-    LEFT JOIN dbo.cat_sku AS EC ON VT.ean = EC.ean
-    LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo and EC.marca = M.marca
-    LEFT JOIN dbo.tiendas AS T ON VT.num_local = T.codigo
-    LEFT JOIN dbo.marca AS MA ON EC.marca = MA.marca_bd
-    LEFT JOIN dbo.semanas AS SEM ON VT.fecha BETWEEN SEM.dia_inicio AND SEM.dia_fin
-    INNER JOIN Valid_Marca_Tipo VMT ON VMT."Marca" = (
-        CASE
-            WHEN substr(EC.categoria,1,7) = 'J090103' THEN 'YAMP B'
-            WHEN substr(EC.categoria,1,7) = 'J090303' THEN 'YAMP G'
-            WHEN substr(EC.categoria,1,7) = 'J090504' THEN 'YAMP BEBA'
-            WHEN substr(EC.categoria,1,7) = 'J090503' THEN 'YAMP BEBO'
-            ELSE COALESCE(MA.new_marca, EC.marca )
-        END
-    ) AND VMT."Tipo_Programa" = M.tipo AND COALESCE(VMT."Fit_Estilo",'') = COALESCE(M.fit,'')
-    
-    WHERE VT.ini_cliente = P.ini_cliente and T.tipo = 'TIENDA'
-    and VT.fecha between P.fecha_inicio and P.fecha_fin
-
-) as syv
-GROUP BY
-    syv.ini_cliente,
-    syv.c_l,
-    syv.local,
-    syv.ciudad,
-    syv.marca,
-    syv.tipo_programa,
-    syv.fit_estilo,
-    syv.semanas;
+    INNER JOIN dbo.cat_sku EC ON VT.ean = EC.ean
+    INNER JOIN dbo.tiendas T ON VT.num_local = T.codigo AND T.tipo = 'TIENDA'
+    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo 
+        AND VMT.vmt_fit IS NOT DISTINCT FROM M.fit
+        AND VMT.vmt_marca = COALESCE(
+            (SELECT marca FROM dbo.marca_subclase WHERE ini_cliente = VT.ini_cliente AND subcategoria = substring(EC.categoria from 1 for 7) LIMIT 1),
+            (SELECT new_marca FROM dbo.marca WHERE marca_bd = EC.marca LIMIT 1),
+            EC.marca
+        )
+    LEFT JOIN dbo.semanas SEM ON VT.fecha BETWEEN SEM.dia_inicio AND SEM.dia_fin
+    WHERE VT.ini_cliente = :ini_cliente 
+      AND VT.fecha BETWEEN :fecha_inicio AND :fecha_fin
+) syv
+GROUP BY 1,2,3,4,5,6,7,8;

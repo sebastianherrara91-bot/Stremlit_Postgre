@@ -1,51 +1,38 @@
-# Project Overview
+# Project Overview: DashInco (PostgreSQL Version)
 
-This project is a data analysis and visualization application built with Python. It uses Streamlit to create an interactive web-based dashboard. The application fetches data from a SQL Server database, processes it with Pandas, and displays it to the user.
+This project is a data analysis and visualization web application built with Python. It uses **Streamlit** to create an interactive dashboard for checking sales performance, inventory turnover (sell-through), and participation per colors/sizes. The application fetches data from a **PostgreSQL** database, processes it with Pandas, and displays interactive visuals with Plotly.
 
 ## Main Technologies
 
-*   **Backend:** Python
-*   **Frontend:** Streamlit
-*   **Data Manipulation:** Pandas
-*   **Database:** SQL Server (via pyodbc)
-*   **Visualization:** Plotly
+- **Backend:** Python
+- **Frontend:** Streamlit 1.50.0 (Responsive `width='stretch'` layouts)
+- **Data Manipulation:** Pandas & NumPy
+- **Database:** PostgreSQL (via `psycopg2-binary` and `sqlalchemy`)
+- **Visualization:** Plotly & AgGrid
+- **Hosting/Execution Environment:** Windows local development, Ubuntu 22.04 LTS Container (Proxmox/LXC) for production.
 
-## Architecture
+## Architecture & Code Highlights
 
-The project is structured as follows:
+- `init.py`: The **main entry point** to run the app. It manages Sidebar selections, global filters, and uses **concurrent parallelism** (`concurrent.futures.ThreadPoolExecutor`) to dispatch heavy queries simultaneously, greatly minimizing waiting times for the dashboards.
+- Modules: Dedicated dashboard sections handled in separate files like `MD_Resumen_Tienda.py`, `MD_Ventas_por_color.py`, `MD_Ventas_por_talla.py`, `MD_Ventas_Sem_Ano.py`. Exports functionality is handled by `excel_exporter.py`.
+- `GestorSQL.py`: A data access layer handling the dynamic connection to PostgreSQL. It checks `os.name` to optionally vary driver strings, masks credentials loaded via `python-dotenv`, and uses `SQLAlchemy` mapping with Python dictionaries to securely inject parameters using `CAST(:param AS TYPE)` standard logic.
+- `Querys/`: Directory housing `.sql` files. These queries have been migrated from SQL Server logic to PostgreSQL natively (e.g. usage of `date_trunc`, `interval`, native min/max boundary search avoiding intense nested loops on large tables like `dwh_ventas`).
+- `.env`: The central hub for connection secrets containing `DB_SERVER`, `DB_PORT`, `DB_DATABASE`, `DB_USER` and `DB_PASSWORD`. This path is tracked via `.gitignore` to prevent exposure.
 
-*   `Ventas_por_color.py`: The main application file. It contains the Streamlit UI code for the dashboard, including filters and data display.
-*   `GestorSQL.py`: A data access layer that handles the connection to the SQL Server database. It contains functions for executing SQL queries and returning data as Pandas DataFrames.
-*   `Querys/`: This directory stores the SQL queries used by the application.
-    *   `Ventas_StockUltsem.sql`: A complex query that retrieves sales and stock data.
-    *   `Tiendas.sql`: A simple query that retrieves store information.
-*   `requeriment.tct`: Lists the Python dependencies. This file should be renamed to `requirements.txt`.
-*   `Conexion.json`: Contains database connection credentials. **Warning: This file contains sensitive information and should not be committed to version control.**
+## Deploy instructions (LXC Ubuntu/Proxmox)
 
-## Building and Running
+A detailed file `Despliegue_Contenedor_Ubuntu22.txt` resides in the main root outlining exact proxy integration with `Nginx` and `systemd` daemon handling for the App.
 
-1.  **Rename `requeriment.tct` to `requirements.txt`:**
-    ```bash
-    mv requeriment.tct requirements.txt
-    ```
+The application logic updates in production using mapped GitHub repositories under branch `Stremlit_Postgre`.
 
-2.  **Create and activate a virtual environment:**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-    ```
+**Main bridge deployment run (Refresh env):**
 
-3.  **Install the dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+```bash
+cd /opt/DashInco && git remote set-url origin https://github.com/sebastianherrara91-bot/Stremlit_Postgre.git && git fetch origin && git reset --hard origin/main && rm -rf venv && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && deactivate && sudo systemctl restart streamlit.service
+```
 
-4.  **Run the Streamlit application:**
-    ```bash
-    streamlit run Ventas_por_color.py
-    ```
+**Standard daily deployment command:**
 
-## Development Conventions
-
-*   **Database Credentials:** Database credentials are currently hardcoded in `GestorSQL.py` and `Conexion.json`. This is a security risk. It is highly recommended to use environment variables to manage sensitive information. The `python-dotenv` library is already included in the requirements and can be used for this purpose.
-*   **SQL Queries:** SQL queries are kept separate from the Python code in the `Querys/` directory. This is a good practice that improves code readability and maintainability.
+```bash
+cd /opt/DashInco && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && deactivate && sudo systemctl restart streamlit.service
+```
