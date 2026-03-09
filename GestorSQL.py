@@ -105,7 +105,7 @@ def get_dataframe(consulta_sql, params=None):
         st.error(f"Error al obtener datos: {str(e)}")
         return pd.DataFrame()  # Retorna un DataFrame vacío en caso de error
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=1800)
 def get_semanas_disponibles():
     """
     Obtiene las semanas disponibles desde la base de datos, formateadas para los selectbox.
@@ -139,7 +139,7 @@ def get_semanas_disponibles():
         st.error(f"Error al obtener la lista de semanas: {str(e)}")
         return {}
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=1800)
 def get_clientes():
     """
     Obtiene una lista de clientes únicos desde la base de datos.
