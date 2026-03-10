@@ -17,7 +17,7 @@ def main(DataF, cliente_seleccionado):
 
     # Inicio de los cálculos de participación para el gráfico___________________________________________________________________________________________________________
     
-    df_calculos = df_filtrado.groupby(['COLOR','Color_Hexa','C_Color'], dropna=False).agg({'Cant_Venta': 'sum','Cant_Stock': 'sum'}).reset_index()
+    df_calculos = df_filtrado.groupby(['Color','Color_Hexa','C_Color'], dropna=False).agg({'Cant_Venta': 'sum','Cant_Stock': 'sum'}).reset_index()
     df_calculos['Total_Unidades'] = df_calculos['Cant_Venta'] + df_calculos['Cant_Stock']
     total_unidades_global = df_calculos['Total_Unidades'].sum()
     df_calculos['%_Participacion_Total'] = (df_calculos['Total_Unidades'] / total_unidades_global) * 100 if total_unidades_global else None
@@ -33,10 +33,10 @@ def main(DataF, cliente_seleccionado):
     
     st.sidebar.write(f'Quitar menor a {slider} % de participación')    
     df_calculos = df_calculos[df_calculos['%_Participacion_Total'] >= slider]
-    Colores = df_calculos['COLOR'].unique().tolist()
+    Colores = df_calculos['Color'].unique().tolist()
     
-    df_ParaFor = df_filtrado.groupby(['C_L','Local','Ciudad','COLOR','Color_Hexa','C_Color'], dropna=False).agg({'Cant_Venta': 'sum','Cant_Stock': 'sum'}).reset_index()
-    df_ParaFor = df_ParaFor[df_ParaFor['COLOR'].isin(Colores)]
+    df_ParaFor = df_filtrado.groupby(['C_L','Local','Ciudad','Color','Color_Hexa','C_Color'], dropna=False).agg({'Cant_Venta': 'sum','Cant_Stock': 'sum'}).reset_index()
+    df_ParaFor = df_ParaFor[df_ParaFor['Color'].isin(Colores)]
 
     Locales = df_ParaFor[['Local', 'Ciudad']].drop_duplicates().sort_values(by=['Ciudad', 'Local']).values.tolist()
 
@@ -48,7 +48,7 @@ def main(DataF, cliente_seleccionado):
 
         with Columna_Actual:
             df_local = df_ParaFor[df_ParaFor['Local'] == local[0]].copy() 
-            df_local = df_local.groupby(['COLOR', 'Color_Hexa','C_Color']).agg({'Cant_Venta': 'sum', 'Cant_Stock': 'sum'}).reset_index()
+            df_local = df_local.groupby(['Color', 'Color_Hexa','C_Color']).agg({'Cant_Venta': 'sum', 'Cant_Stock': 'sum'}).reset_index()
             T_Venta = df_local['Cant_Venta'].sum()
             T_Stock = df_local['Cant_Stock'].sum()
             df_local['%_Participacion_Venta'] = (df_local['Cant_Venta'] / T_Venta) * 100 if T_Venta else None
@@ -58,8 +58,8 @@ def main(DataF, cliente_seleccionado):
 
             # INICIO: Gráfico de Barras de Participación por Color___________________________________________________________________________________________________________
             # 1. Agregamos los datos por COLOR y Color_Hexa para el gráfico___________________________________________________________________________________________________________
-            df_chart = df_local.dropna(subset=['COLOR', 'Color_Hexa']).copy()
-            df_chart = df_chart.groupby(['COLOR', 'Color_Hexa','C_Color']).agg({'%_Participacion_Venta': 'sum', '%_Participacion_Stock': 'sum', 'Cant_Venta': 'sum', 'Cant_Stock': 'sum'}).reset_index()
+            df_chart = df_local.dropna(subset=['Color', 'Color_Hexa']).copy()
+            df_chart = df_chart.groupby(['Color', 'Color_Hexa','C_Color']).agg({'%_Participacion_Venta': 'sum', '%_Participacion_Stock': 'sum', 'Cant_Venta': 'sum', 'Cant_Stock': 'sum'}).reset_index()
 
             # Solo proceder si tenemos datos para graficar
             if not df_chart.empty:
@@ -67,7 +67,7 @@ def main(DataF, cliente_seleccionado):
                 # 3. Llamamos a la función reutilizable para crear la gráfica (sin título)
                 fig = GBD.crear_grafica_barra_doble_horizontal(
                     dataframe=df_chart,
-                    eje_y_col=['C_Color','COLOR'],
+                    eje_y_col=['C_Color','Color'],
                     eje_x_col1='%_Participacion_Venta',
                     eje_x_col2='%_Participacion_Stock',
                     color_hex_col='Color_Hexa',

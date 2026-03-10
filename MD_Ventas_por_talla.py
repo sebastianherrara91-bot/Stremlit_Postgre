@@ -14,15 +14,15 @@ def main(DataF, cliente_seleccionado):
     selections = sidebar_filters.get_filter_selections(DataF)
     df_filtroTL = sidebar_filters.apply_filters(DataF, selections)
     
-    opciones = sorted(list(map(str, df_filtroTL["COLOR"].unique())))
+    opciones = sorted(list(map(str, df_filtroTL["Color"].unique())))
     selecciones_multi = st.sidebar.multiselect("Color", opciones, key="ms_color")
     if selecciones_multi:
-        selections["COLOR"] = selecciones_multi
+        selections["Color"] = selecciones_multi
 
     # --- Lógica de Filtro de Participación --- #
     # Se calcula la participación total por talla sobre los datos ya filtrados por el usuario
     if selecciones_multi:
-        df_filtroTL = df_filtroTL[df_filtroTL['COLOR'].isin(selecciones_multi)]
+        df_filtroTL = df_filtroTL[df_filtroTL['Color'].isin(selecciones_multi)]
         
     df_calculosTL = df_filtroTL.groupby(['Talla'], dropna=False).agg({'Cant_Venta': 'sum', 'Cant_Stock': 'sum'}).reset_index()
     df_calculosTL['Total_Unidades'] = df_calculosTL['Cant_Venta'] + df_calculosTL['Cant_Stock']

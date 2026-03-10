@@ -4,7 +4,7 @@ WITH Valid_Marca_Tipo AS (
         M.tipo AS vmt_tipo,
         M.fit AS vmt_fit
     FROM dbo.dwh_stock AS ST
-    INNER JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
+    LEFT JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
     LEFT JOIN dbo.marca_subclase AS MS ON ST.ini_cliente = MS.ini_cliente 
         AND substring(EC.categoria from 1 for 7) = MS.subcategoria
     LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
@@ -30,10 +30,10 @@ FROM (
         (date_trunc('week', ST.fecha))::date as fecha, SEM.n_sem, SEM.ano,
         0 as cant_v, ST.cant as cant_s, 0 as pvp
     FROM dbo.dwh_stock ST
-    INNER JOIN dbo.cat_sku EC ON ST.ean = EC.ean
-    INNER JOIN dbo.tiendas T ON ST.num_local = T.codigo AND T.tipo = 'TIENDA'
-    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
-    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo
+    LEFT JOIN dbo.cat_sku EC ON ST.ean = EC.ean
+    LEFT JOIN dbo.tiendas T ON ST.num_local = T.codigo AND T.tipo = 'TIENDA'
+    LEFT JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo
     LEFT JOIN dbo.semanas SEM ON (date_trunc('week', ST.fecha))::date = SEM.dia_inicio
     WHERE ST.ini_cliente = :ini_cliente 
       AND ST.fecha BETWEEN ((date_trunc('week', current_date))::date - interval '8 weeks')::date AND (date_trunc('week', current_date))::date
@@ -46,12 +46,12 @@ FROM (
         (date_trunc('week', VT.fecha))::date as fecha, SEM.n_sem, SEM.ano,
         VT.cant as cant_v, 0 as cant_s, VT.pvp_unit as pvp
     FROM dbo.dwh_ventas VT
-    INNER JOIN dbo.cat_sku EC ON VT.ean = EC.ean
-    INNER JOIN dbo.tiendas T ON VT.num_local = T.codigo AND T.tipo = 'TIENDA'
-    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
-    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo
+    LEFT JOIN dbo.cat_sku EC ON VT.ean = EC.ean
+    LEFT JOIN dbo.tiendas T ON VT.num_local = T.codigo AND T.tipo = 'TIENDA'
+    LEFT JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo
     LEFT JOIN dbo.semanas SEM ON (date_trunc('week', VT.fecha))::date = SEM.dia_inicio
     WHERE VT.ini_cliente = :ini_cliente 
       AND VT.fecha BETWEEN ((date_trunc('week', current_date))::date - interval '8 weeks')::date AND (date_trunc('week', current_date))::date
 ) syv
-GROUP BY 1,2,3,4,5,6,7,8,9,10,12,13;
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;

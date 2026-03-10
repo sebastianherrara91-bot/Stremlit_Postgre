@@ -1,79 +1,72 @@
 WITH Valid_Marca_Tipo AS (
-    -- Paso 1: Filtro de productos con stock suficiente
     SELECT
         COALESCE(MS.marca, MA.new_marca, EC.marca) AS vmt_marca,
         M.tipo AS vmt_tipo,
         M.fit AS vmt_fit
     FROM dbo.dwh_stock AS ST
-    INNER JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
-    LEFT JOIN dbo.marca_subclase AS MS 
-        ON ST.ini_cliente = MS.ini_cliente 
+    LEFT JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
+    LEFT JOIN dbo.marca_subclase AS MS ON ST.ini_cliente = MS.ini_cliente 
         AND substring(EC.categoria from 1 for 7) = MS.subcategoria
     LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
     LEFT JOIN dbo.marca AS MA ON EC.marca = MA.marca_bd
     LEFT JOIN dbo.tiendas AS T ON ST.num_local = T.codigo
     WHERE ST.ini_cliente = :ini_cliente
-      AND ST.fecha = :fecha_fin -- Pruning al cuatrimestre final
+      AND ST.fecha = :fecha_fin
       AND T.tipo = 'TIENDA'
     GROUP BY 1, 2, 3
     HAVING SUM(ST.cant) >= :stock_threshold
 )
-
 SELECT
-    syv.ini_cliente AS "Ini_Cliente",
-    syv.c_l AS "C_L",
-    syv.local AS "Local",
-    syv.ciudad AS "Ciudad",
-    syv.marca AS "Marca",
-    syv.tipo_programa AS "Tipo_Programa",
-    syv.fit_estilo AS "Fit_Estilo",
-    syv.semanas AS "Semanas",
-    SUM(syv.cant_v) AS "Cant_Venta",
-    SUM(syv.cant_s) AS "Cant_Stock",
-    -- PVP Promedio Ponderado
+    sub.ini_cliente AS "Ini_Cliente",
+    sub.c_l AS "C_L",
+    sub.local AS "Local",
+    sub.ciudad AS "Ciudad",
+    sub.marca_calc AS "Marca",
+    sub.tipo_calc AS "Tipo_Programa",
+    sub.fit_calc AS "Fit_Estilo",
+    to_char(SEM.dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(SEM.n_sem, 'FM00') AS "Semanas",
+    SUM(sub.v_cant) AS "Cant_Venta",
+    SUM(sub.s_cant) AS "Cant_Stock",
     ROUND(CASE 
-        WHEN SUM(syv.cant_v) = 0 THEN 0 
-        ELSE SUM(syv.pvp_total) / NULLIF(SUM(syv.cant_v), 0) 
+        WHEN SUM(sub.v_cant) = 0 THEN 0 
+        ELSE SUM(sub.v_pvp) / NULLIF(SUM(sub.v_cant), 0) 
     END, 0) AS "PVP_Prom"
 FROM (
-    -- Bloque Stock
+    -- BLOQUE STOCK
     SELECT
         ST.ini_cliente, ST.num_local AS c_l, T.local, T.ciudad,
-        VMT.vmt_marca AS marca, VMT.vmt_tipo AS tipo_programa, VMT.vmt_fit AS fit_estilo,
-        to_char(SEM.dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(SEM.n_sem, 'FM00') AS semanas,
-        0 AS cant_v, ST.cant AS cant_s, 0 AS pvp_total
+        COALESCE(MS.marca, MA.new_marca, EC.marca) AS marca_calc,
+        M.tipo AS tipo_calc, M.fit AS fit_calc,
+        (date_trunc('week', ST.fecha))::date AS lunes_sem,
+        0 AS v_cant, ST.cant AS s_cant, 0 AS v_pvp
     FROM dbo.dwh_stock ST
-    INNER JOIN dbo.cat_sku EC ON ST.ean = EC.ean
-    INNER JOIN dbo.tiendas T ON ST.num_local = T.codigo AND T.tipo = 'TIENDA'
-    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN dbo.cat_sku EC ON ST.ean = EC.ean
+    LEFT JOIN dbo.tiendas T ON ST.num_local = T.codigo AND T.tipo = 'TIENDA'
+    LEFT JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
     LEFT JOIN dbo.marca_subclase MS ON ST.ini_cliente = MS.ini_cliente AND substring(EC.categoria from 1 for 7) = MS.subcategoria
     LEFT JOIN dbo.marca MA ON EC.marca = MA.marca_bd
-    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo 
-        AND VMT.vmt_fit IS NOT DISTINCT FROM M.fit
-        AND VMT.vmt_marca = COALESCE(MS.marca, MA.new_marca, EC.marca)
-    LEFT JOIN dbo.semanas SEM ON ST.fecha BETWEEN SEM.dia_inicio AND SEM.dia_fin
-    WHERE ST.ini_cliente = :ini_cliente 
-      AND ST.fecha BETWEEN :fecha_inicio_stock AND :fecha_fin
+    WHERE ST.ini_cliente = :ini_cliente AND ST.fecha BETWEEN :fecha_inicio_stock AND :fecha_fin
 
     UNION ALL
 
-    -- Bloque Ventas
+    -- BLOQUE VENTAS
     SELECT
         VT.ini_cliente, VT.num_local AS c_l, T.local, T.ciudad,
-        VMT.vmt_marca AS marca, VMT.vmt_tipo AS tipo_programa, VMT.vmt_fit AS fit_estilo,
-        to_char(SEM.dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(SEM.n_sem, 'FM00') AS semanas,
-        VT.cant AS cant_v, 0 AS cant_s, (VT.cant * VT.pvp_unit) AS pvp_total
+        COALESCE(MS.marca, MA.new_marca, EC.marca) AS marca_calc,
+        M.tipo AS tipo_calc, M.fit AS fit_calc,
+        (date_trunc('week', VT.fecha))::date AS lunes_sem,
+        VT.cant AS v_cant, 0 AS s_cant, (VT.cant * VT.pvp_unit) AS v_pvp
     FROM dbo.dwh_ventas VT
-    INNER JOIN dbo.cat_sku EC ON VT.ean = EC.ean
-    INNER JOIN dbo.tiendas T ON VT.num_local = T.codigo AND T.tipo = 'TIENDA'
-    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN dbo.cat_sku EC ON VT.ean = EC.ean
+    LEFT JOIN dbo.tiendas T ON VT.num_local = T.codigo AND T.tipo = 'TIENDA'
+    LEFT JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
     LEFT JOIN dbo.marca_subclase MS ON VT.ini_cliente = MS.ini_cliente AND substring(EC.categoria from 1 for 7) = MS.subcategoria
     LEFT JOIN dbo.marca MA ON EC.marca = MA.marca_bd
-    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo 
-        AND VMT.vmt_fit IS NOT DISTINCT FROM M.fit
-        AND VMT.vmt_marca = COALESCE(MS.marca, MA.new_marca, EC.marca)
-    LEFT JOIN dbo.semanas SEM ON VT.fecha BETWEEN SEM.dia_inicio AND SEM.dia_fin
-    WHERE VT.ini_cliente = :ini_cliente 
-      AND VT.fecha BETWEEN :fecha_inicio AND :fecha_fin
-) syv
-GROUP BY 1,2,3,4,5,6,7,8;
+    WHERE VT.ini_cliente = :ini_cliente AND VT.fecha BETWEEN :fecha_inicio AND :fecha_fin
+) AS sub
+INNER JOIN Valid_Marca_Tipo VMT 
+    ON VMT.vmt_marca = sub.marca_calc 
+    AND VMT.vmt_tipo = sub.tipo_calc 
+    AND VMT.vmt_fit IS NOT DISTINCT FROM sub.fit_calc
+LEFT JOIN dbo.semanas SEM ON sub.lunes_sem = SEM.dia_inicio
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8;

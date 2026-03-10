@@ -9,7 +9,7 @@ Valid_Marca_Tipo AS (
         M.fit AS vmt_fit
     FROM dbo.dwh_stock AS ST
     CROSS JOIN params P
-    INNER JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
+    LEFT JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
     LEFT JOIN dbo.marca_subclase AS MS 
         ON ST.ini_cliente = MS.ini_cliente 
         AND substring(EC.categoria from 1 for 7) = MS.subcategoria
@@ -42,9 +42,9 @@ FROM (
         0 AS cant_v, ST.cant AS cant_s
     FROM dbo.dwh_stock AS ST
     CROSS JOIN params P
-    INNER JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
-    INNER JOIN dbo.tiendas AS T ON ST.num_local = T.codigo AND T.tipo = 'TIENDA'
-    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
+    LEFT JOIN dbo.tiendas AS T ON ST.num_local = T.codigo AND T.tipo = 'TIENDA'
+    LEFT JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
     LEFT JOIN dbo.marca_subclase MS ON ST.ini_cliente = MS.ini_cliente AND substring(EC.categoria from 1 for 7) = MS.subcategoria
     LEFT JOIN dbo.marca MA ON EC.marca = MA.marca_bd
     INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo 
@@ -68,9 +68,9 @@ FROM (
         VT.cant AS cant_v, 0 AS cant_s
     FROM dbo.dwh_ventas VT
     CROSS JOIN params P
-    INNER JOIN dbo.cat_sku AS EC ON VT.ean = EC.ean
-    INNER JOIN dbo.tiendas AS T ON VT.num_local = T.codigo AND T.tipo = 'TIENDA'
-    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN dbo.cat_sku AS EC ON VT.ean = EC.ean
+    LEFT JOIN dbo.tiendas AS T ON VT.num_local = T.codigo AND T.tipo = 'TIENDA'
+    LEFT JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
     LEFT JOIN dbo.marca_subclase MS ON VT.ini_cliente = MS.ini_cliente AND substring(EC.categoria from 1 for 7) = MS.subcategoria
     LEFT JOIN dbo.marca MA ON EC.marca = MA.marca_bd
     INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo 

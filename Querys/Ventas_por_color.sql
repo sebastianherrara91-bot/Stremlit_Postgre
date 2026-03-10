@@ -1,81 +1,57 @@
 WITH Valid_Marca_Tipo AS (
-    -- Paso 1: Identificamos qué marcas/estilos tienen stock suficiente
     SELECT
         COALESCE(MS.marca, MA.new_marca, EC.marca) AS vmt_marca,
         M.tipo AS vmt_tipo,
         M.fit AS vmt_fit
     FROM dbo.dwh_stock AS ST
-    INNER JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
-    LEFT JOIN dbo.marca_subclase AS MS 
-        ON ST.ini_cliente = MS.ini_cliente 
-        AND substring(EC.categoria from 1 for 7) = MS.subcategoria
+    LEFT JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
+    LEFT JOIN dbo.marca_subclase AS MS ON ST.ini_cliente = MS.ini_cliente AND substring(EC.categoria from 1 for 7) = MS.subcategoria
     LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
     LEFT JOIN dbo.marca AS MA ON EC.marca = MA.marca_bd
     LEFT JOIN dbo.tiendas AS T ON ST.num_local = T.codigo
-    WHERE ST.ini_cliente = :ini_cliente
-      AND ST.fecha = :fecha_fin -- Pruning al cuatrimestre final
-      AND T.tipo = 'TIENDA'
+    WHERE ST.ini_cliente = :ini_cliente AND ST.fecha = :fecha_fin AND T.tipo = 'TIENDA'
     GROUP BY 1, 2, 3
     HAVING SUM(ST.cant) >= :stock_threshold
 )
-
 SELECT
-    syv.ini_cliente AS "Ini_Cliente",
-    syv.tipo_programa AS "Tipo_Programa",
-    syv.c_l AS "C_L",
-    syv.local AS "Local",
-    syv.ciudad AS "Ciudad",
-    syv.marca AS "Marca",
-    syv.semanas AS "Semanas",
-    syv.fit_estilo AS "Fit_Estilo",
-    syv.color AS "COLOR",
-    syv.c_color AS "C_Color",
-    syv.color_hexa AS "Color_Hexa",
-    SUM(syv.cant_v) as "Cant_Venta",
-    SUM(syv.cant_s) as "Cant_Stock"
+    sub.ini_cliente AS "Ini_Cliente", sub.tipo_calc AS "Tipo_Programa", sub.c_l AS "C_L",
+    sub.local AS "Local", sub.ciudad AS "Ciudad", sub.marca_calc AS "Marca",
+    to_char(SEM.dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(SEM.n_sem, 'FM00') AS "Semanas",
+    sub.fit_calc AS "Fit_Estilo", sub.color AS "Color", sub.c_color AS "C_Color", sub.color_hexa as "Color_Hexa",
+    SUM(sub.v_cant) AS "Cant_Venta", SUM(sub.s_cant) AS "Cant_Stock"
 FROM (
-    -- Bloque Stock
     SELECT
-        ST.ini_cliente, M.tipo as tipo_programa, ST.num_local as c_l, T.local, T.ciudad,
-        VMT.vmt_marca as marca,
-        to_char(SEM.dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(SEM.n_sem, 'FM00') as semanas,
-        M.fit as fit_estilo, CO.color, EC.cod_color as c_color, CO.color_hexa,
-        0 AS cant_v, ST.cant AS cant_s
+        ST.ini_cliente, M.tipo as tipo_calc, ST.num_local as c_l, T.local, T.ciudad,
+        COALESCE(MS.marca, MA.new_marca, EC.marca) as marca_calc,
+        M.fit as fit_calc, CO.color, EC.cod_color as c_color, CO.color_hexa as color_hexa,
+        (date_trunc('week', ST.fecha))::date as lunes_sem,
+        0 as v_cant, ST.cant as s_cant
     FROM dbo.dwh_stock ST
-    INNER JOIN dbo.cat_sku EC ON ST.ean = EC.ean
-    INNER JOIN dbo.tiendas T ON ST.num_local = T.codigo AND T.tipo = 'TIENDA'
-    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN dbo.cat_sku EC ON ST.ean = EC.ean
+    LEFT JOIN dbo.tiendas T ON ST.num_local = T.codigo AND T.tipo = 'TIENDA'
+    LEFT JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN dbo.cod_color CO ON EC.cod_color = CO.codigo
     LEFT JOIN dbo.marca_subclase MS ON ST.ini_cliente = MS.ini_cliente AND substring(EC.categoria from 1 for 7) = MS.subcategoria
     LEFT JOIN dbo.marca MA ON EC.marca = MA.marca_bd
-    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo 
-        AND VMT.vmt_fit IS NOT DISTINCT FROM M.fit
-        AND VMT.vmt_marca = COALESCE(MS.marca, MA.new_marca, EC.marca)
-    LEFT JOIN dbo.cod_color CO ON EC.cod_color = CO.codigo
-    LEFT JOIN dbo.semanas SEM ON ST.fecha BETWEEN SEM.dia_inicio AND SEM.dia_fin
-    WHERE ST.ini_cliente = :ini_cliente 
-      AND ST.fecha BETWEEN :fecha_inicio_stock AND :fecha_fin
+    WHERE ST.ini_cliente = :ini_cliente AND ST.fecha BETWEEN :fecha_inicio_stock AND :fecha_fin
 
     UNION ALL
 
-    -- Bloque Ventas
     SELECT
-        VT.ini_cliente, M.tipo as tipo_programa, VT.num_local as c_l, T.local, T.ciudad,
-        VMT.vmt_marca as marca,
-        to_char(SEM.dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(SEM.n_sem, 'FM00') as semanas,
-        M.fit as fit_estilo, CO.color, EC.cod_color as c_color, CO.color_hexa,
-        VT.cant AS cant_v, 0 AS cant_s
+        VT.ini_cliente, M.tipo as tipo_calc, VT.num_local as c_l, T.local, T.ciudad,
+        COALESCE(MS.marca, MA.new_marca, EC.marca) as marca_calc,
+        M.fit as fit_calc, CO.color, EC.cod_color as c_color, CO.color_hexa as color_hexa,
+        (date_trunc('week', VT.fecha))::date as lunes_sem,
+        VT.cant as v_cant, 0 as s_cant
     FROM dbo.dwh_ventas VT
-    INNER JOIN dbo.cat_sku EC ON VT.ean = EC.ean
-    INNER JOIN dbo.tiendas T ON VT.num_local = T.codigo AND T.tipo = 'TIENDA'
-    INNER JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN dbo.cat_sku EC ON VT.ean = EC.ean
+    LEFT JOIN dbo.tiendas T ON VT.num_local = T.codigo AND T.tipo = 'TIENDA'
+    LEFT JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN dbo.cod_color CO ON EC.cod_color = CO.codigo
     LEFT JOIN dbo.marca_subclase MS ON VT.ini_cliente = MS.ini_cliente AND substring(EC.categoria from 1 for 7) = MS.subcategoria
     LEFT JOIN dbo.marca MA ON EC.marca = MA.marca_bd
-    INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_tipo = M.tipo 
-        AND VMT.vmt_fit IS NOT DISTINCT FROM M.fit
-        AND VMT.vmt_marca = COALESCE(MS.marca, MA.new_marca, EC.marca)
-    LEFT JOIN dbo.cod_color CO ON EC.cod_color = CO.codigo
-    LEFT JOIN dbo.semanas SEM ON VT.fecha BETWEEN SEM.dia_inicio AND SEM.dia_fin
-    WHERE VT.ini_cliente = :ini_cliente 
-      AND VT.fecha BETWEEN :fecha_inicio AND :fecha_fin
-) syv
-GROUP BY 1,2,3,4,5,6,7,8,9,10,11;
+    WHERE VT.ini_cliente = :ini_cliente AND VT.fecha BETWEEN :fecha_inicio AND :fecha_fin
+) AS sub
+INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_marca = sub.marca_calc AND VMT.vmt_tipo = sub.tipo_calc AND VMT.vmt_fit IS NOT DISTINCT FROM sub.fit_calc
+LEFT JOIN dbo.semanas SEM ON sub.lunes_sem = SEM.dia_inicio
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11;
