@@ -2,8 +2,7 @@ WITH Valid_Marca_Tipo AS (
     -- Paso 1: Identificamos qué marcas/estilos tienen stock suficiente
     SELECT
         COALESCE(MS.marca, MA.new_marca, EC.marca) AS vmt_marca,
-        M.tipo AS vmt_tipo,
-        M.fit AS vmt_fit
+        M.tipo AS vmt_tipo
     FROM dbo.dwh_stock AS ST
     LEFT JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
     LEFT JOIN dbo.marca_subclase AS MS 
@@ -11,11 +10,8 @@ WITH Valid_Marca_Tipo AS (
         AND substring(EC.categoria from 1 for 7) = MS.subcategoria
     LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
     LEFT JOIN dbo.marca AS MA ON EC.marca = MA.marca_bd
-    LEFT JOIN dbo.tiendas AS T ON ST.num_local = T.codigo
-    WHERE ST.ini_cliente = :ini_cliente
-      AND ST.fecha = :fecha_fin
-      AND T.tipo = 'TIENDA'
-    GROUP BY 1, 2, 3
+    WHERE ST.ini_cliente = :ini_cliente AND ST.fecha = :fecha_fin
+    GROUP BY 1, 2
     HAVING SUM(ST.cant) >= :stock_threshold
 )
 
@@ -47,13 +43,13 @@ FROM (
         (date_trunc('week', ST.fecha))::date AS lunes_sem,
         0 AS v_cant,
         ST.cant AS s_cant
-    FROM dbo.dwh_stock ST
-    LEFT JOIN dbo.cat_sku EC ON ST.ean = EC.ean
-    LEFT JOIN dbo.tiendas T ON ST.num_local = T.codigo AND T.tipo = 'TIENDA'
-    LEFT JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
-    LEFT JOIN dbo.cod_color CO ON EC.cod_color = CO.codigo
-    LEFT JOIN dbo.marca_subclase MS ON ST.ini_cliente = MS.ini_cliente AND substring(EC.categoria from 1 for 7) = MS.subcategoria
-    LEFT JOIN dbo.marca MA ON EC.marca = MA.marca_bd
+    FROM dbo.dwh_stock AS ST
+    LEFT JOIN dbo.cat_sku AS EC ON ST.ean = EC.ean
+    INNER JOIN dbo.tiendas AS T ON ST.num_local = T.codigo AND T.ini_cliente = ST.ini_cliente AND T.tipo = 'TIENDA'
+    LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN dbo.cod_color AS CO ON EC.cod_color = CO.codigo
+    LEFT JOIN dbo.marca_subclase AS MS ON ST.ini_cliente = MS.ini_cliente AND substring(EC.categoria from 1 for 7) = MS.subcategoria
+    LEFT JOIN dbo.marca AS MA ON EC.marca = MA.marca_bd
     WHERE ST.ini_cliente = :ini_cliente 
       AND ST.fecha BETWEEN :fecha_inicio_stock AND :fecha_fin
 
@@ -73,23 +69,19 @@ FROM (
         (date_trunc('week', VT.fecha))::date AS lunes_sem,
         VT.cant AS v_cant,
         0 AS s_cant
-    FROM dbo.dwh_ventas VT
-    LEFT JOIN dbo.cat_sku EC ON VT.ean = EC.ean
-    LEFT JOIN dbo.tiendas T ON VT.num_local = T.codigo AND T.tipo = 'TIENDA'
-    LEFT JOIN dbo.monitoreo M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
-    LEFT JOIN dbo.cod_color CO ON EC.cod_color = CO.codigo
-    LEFT JOIN dbo.marca_subclase MS ON VT.ini_cliente = MS.ini_cliente AND substring(EC.categoria from 1 for 7) = MS.subcategoria
-    LEFT JOIN dbo.marca MA ON EC.marca = MA.marca_bd
+    FROM dbo.dwh_ventas AS VT
+    LEFT JOIN dbo.cat_sku AS EC ON VT.ean = EC.ean
+    INNER JOIN dbo.tiendas AS T ON VT.num_local = T.codigo AND T.ini_cliente = VT.ini_cliente AND T.tipo = 'TIENDA'
+    LEFT JOIN dbo.monitoreo AS M ON EC.ref_modelo = M.modelo AND EC.marca = M.marca
+    LEFT JOIN dbo.cod_color AS CO ON EC.cod_color = CO.codigo
+    LEFT JOIN dbo.marca_subclase AS MS ON VT.ini_cliente = MS.ini_cliente AND substring(EC.categoria from 1 for 7) = MS.subcategoria
+    LEFT JOIN dbo.marca AS MA ON EC.marca = MA.marca_bd
     WHERE VT.ini_cliente = :ini_cliente 
       AND VT.fecha BETWEEN :fecha_inicio AND :fecha_fin
 ) AS sub
 -- UNIÓN CON EL UNIVERSO DE MARCAS VALIDADO (Sin funciones pesadas en el ON)
-INNER JOIN Valid_Marca_Tipo VMT 
-    ON VMT.vmt_marca = sub.marca_calc 
-    AND VMT.vmt_tipo = sub.tipo_calc 
-    AND VMT.vmt_fit IS NOT DISTINCT FROM sub.fit_calc
+INNER JOIN Valid_Marca_Tipo VMT ON VMT.vmt_marca = sub.marca_calc AND VMT.vmt_tipo = sub.tipo_calc
 -- CRUCE EXACTO CON SEMANAS (Mucho más rápido que BETWEEN)
-LEFT JOIN dbo.semanas SEM 
-    ON sub.lunes_sem = SEM.dia_inicio 
+LEFT JOIN dbo.semanas SEM ON sub.lunes_sem = SEM.dia_inicio 
 
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
