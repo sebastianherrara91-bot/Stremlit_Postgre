@@ -29,9 +29,9 @@ SELECT
     ,syv.sku_madre
     ,syv.descripcion
     ,syv.modelo
-    ,syv.marca
+    ,syv.marca as "Marca"
     ,syv.subclase
-    ,syv.tipo_programa
+    ,syv.tipo_programa AS "Tipo_Programa"
     ,syv.fit_estilo
     ,syv.color
     ,syv.cod_color

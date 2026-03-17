@@ -277,7 +277,7 @@ def main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_selecci
                     cl_seleccionado_map = mapa_display_cl[tienda_display_seleccionada]
                     df_filtrado = df_filtrado[df_filtrado['C_L'] == cl_seleccionado_map]
                 
-                df_filtrado = sidebar_filters.apply_filters(df_filtrado, selections).dropna(subset=['marca'])
+                df_filtrado = sidebar_filters.apply_filters(df_filtrado, selections).dropna(subset=['Marca'])
 
                 if not df_filtrado.empty:
                     excel_bytes = excel_exporter.to_excel(df_filtrado)
