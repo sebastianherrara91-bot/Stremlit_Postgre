@@ -256,7 +256,10 @@ def main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_selecci
                 otros_filtros.append(f"**{filtro.replace('_', ' ')}:** `{valor_str}`")
             st.markdown(" ".join(otros_filtros))
 
-    if st.button("Generar y Descargar Excel", type="primary"):
+    if st.button("Generar Datos a Excel", type="primary"):
+
+
+
         with st.spinner("Generando archivo Excel... Esto puede tardar unos segundos."):
             # Usar el rango de fecha completo para el stock, como se solicitó.
             params_stock_ultsem = {
@@ -274,13 +277,17 @@ def main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_selecci
                     cl_seleccionado_map = mapa_display_cl[tienda_display_seleccionada]
                     df_filtrado = df_filtrado[df_filtrado['C_L'] == cl_seleccionado_map]
                 
-                df_filtrado = sidebar_filters.apply_filters(df_filtrado, selections)
+                df_filtrado = sidebar_filters.apply_filters(df_filtrado, selections).dropna(subset=['marca'])
 
                 if not df_filtrado.empty:
                     excel_bytes = excel_exporter.to_excel(df_filtrado)
                     b64 = base64.b64encode(excel_bytes).decode()
-                    href = f'<a href="data:application/octet-stream;base64,{b64}" download="detalle_ventas_stock.xlsx">**Descargar Archivo Excel**</a>'
-                    st.markdown(href, unsafe_allow_html=True)
+                    button_html = f'''
+                    <a href="data:application/octet-stream;base64,{b64}" download="detalle_ventas_stock.xlsx" style="display: inline-block; padding: 0.5em 1em; color: white; background-color: #28a745; text-decoration: none; border-radius: 4px; font-weight: bold; text-align: center; margin-bottom: 15px;">
+                        📥 Descargar Archivo Excel
+                    </a>
+                    '''
+                    st.markdown(button_html, unsafe_allow_html=True)
                     st.success("¡Tu archivo está listo para descargar!")
                 else:
                     st.warning("No se encontraron datos detallados para los filtros seleccionados.")

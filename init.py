@@ -87,9 +87,10 @@ def main():
             future_color = executor.submit(get_df_threaded, "Ventas_por_color.sql", params_color_talla)
             future_talla = executor.submit(get_df_threaded, "Ventas_por_talla.sql", params_color_talla)
             
-            df_tienda = future_tienda.result()
-            df_color = future_color.result()
-            df_talla = future_talla.result()
+            #quitar los nulos del la columna Marca en las bases de datos
+            df_tienda = future_tienda.result().dropna(subset=['Marca'])
+            df_color = future_color.result().dropna(subset=['Marca'])
+            df_talla = future_talla.result().dropna(subset=['Marca'])
         
         if not df_tienda.empty and not df_color.empty and not df_talla.empty:
             RT.main(df_tienda, df_color, df_talla, fecha_inicio, fecha_fin, cliente_seleccionado, stock_threshold)
@@ -99,7 +100,7 @@ def main():
     elif selec == "Ventas por Color":
         fecha_inicio_stock_color = fecha_fin - pd.Timedelta(days=6)
         params_color = {'fecha_inicio': fecha_inicio, 'fecha_fin': fecha_fin, 'fecha_inicio_stock': fecha_inicio_stock_color, 'ini_cliente': cliente_seleccionado, 'stock_threshold': stock_threshold}
-        df_color = GSQL.get_dataframe("Ventas_por_color.sql", params=params_color)
+        df_color = GSQL.get_dataframe("Ventas_por_color.sql", params=params_color).dropna(subset=['Marca'])
         if not df_color.empty:
             VPC.main(df_color, cliente_seleccionado)
         else:
@@ -108,7 +109,7 @@ def main():
     elif selec == "Ventas por Talla":
         fecha_inicio_stock_talla = fecha_fin - pd.Timedelta(days=6)
         params_talla = {'fecha_inicio': fecha_inicio, 'fecha_fin': fecha_fin, 'fecha_inicio_stock': fecha_inicio_stock_talla, 'ini_cliente': cliente_seleccionado, 'stock_threshold': stock_threshold}
-        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql", params=params_talla)
+        df_talla = GSQL.get_dataframe("Ventas_por_talla.sql", params=params_talla).dropna(subset=['Marca'])
         if not df_talla.empty:
             VPT.main(df_talla, cliente_seleccionado)
         else:
@@ -121,7 +122,7 @@ def main():
         st.sidebar.markdown("---")
         semanas = st.sidebar.number_input("Semanas a Analizar", min_value=1, value=4, step=1)
         params_sem_ano = {'semanas_stock': semanas, 'semanas_venta': semanas, 'ini_cliente': cliente_seleccionado, 'stock_threshold': stock_threshold}
-        df_sem_ano = GSQL.get_dataframe("Ventas_Sem_Ano.sql", params=params_sem_ano)
+        df_sem_ano = GSQL.get_dataframe("Ventas_Sem_Ano.sql", params=params_sem_ano).dropna(subset=['Marca'])
         if not df_sem_ano.empty:
             VSA.main(df_sem_ano)
         else:
@@ -133,7 +134,6 @@ def main():
         "Quitar Stock menor a:", 
         min_value=0, 
         max_value=2000, 
-        value=800, 
         step=100, 
         key='stock_threshold'
     )
