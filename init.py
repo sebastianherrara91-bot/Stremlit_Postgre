@@ -38,7 +38,7 @@ def main():
 
     # --- LÓGICA DE FILTROS DE FECHA ---
     if selec != "Ventas Semanas Año" and selec != "Ventas por Arte":
-        semanas_dict = GSQL.get_semanas_disponibles()
+        semanas_dict = GSQL.get_semanas_disponibles(cliente_seleccionado)
 
         if not semanas_dict:
             st.sidebar.warning("No se pudieron cargar las semanas disponibles.")

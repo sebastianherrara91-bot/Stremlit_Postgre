@@ -60,11 +60,10 @@ def probar_query_explain(nombre_archivo, params, log_file):
     print(f"[+] Completado {nombre_archivo} en {tiempo_total_app:.2f} s.")
 
 if __name__ == "__main__":
-    # --- 1. CONFIGURACIÓN DE PARÁMETROS REALES PARA LA PRUEBA ---
     # AJUSTA estos valores para que coincidan con algo que un usuario buscaría realmente
     fecha_inicio_prueba = datetime.date(2026, 2, 1)
     fecha_fin_prueba = datetime.date(2026, 3, 8)
-    cliente_prueba = 'FL' # Cambia esto por un cliente real de tu BD
+    cliente_prueba = 'FL'
     umbral_stock_prueba = 800
 
     params_test = {

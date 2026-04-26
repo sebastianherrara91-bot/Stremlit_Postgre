@@ -106,7 +106,7 @@ def get_dataframe(consulta_sql, params=None):
         return pd.DataFrame()  # Retorna un DataFrame vacío en caso de error
 
 @st.cache_data(ttl=1800)
-def get_semanas_disponibles():
+def get_semanas_disponibles(ini_cliente=None):
     """
     Obtiene las semanas disponibles desde la base de datos, formateadas para los selectbox.
     Retorna un diccionario que mapea la etiqueta de la semana a su fecha de fin real.
@@ -120,7 +120,8 @@ def get_semanas_disponibles():
         if not query:
             return {}
             
-        df_semanas = obtener_datos_desde_sql(engine, query)
+        params = {'ini_cliente': ini_cliente} if ini_cliente else None
+        df_semanas = obtener_datos_desde_sql(engine, query, params=params)
         
         if df_semanas.empty:
             return {}

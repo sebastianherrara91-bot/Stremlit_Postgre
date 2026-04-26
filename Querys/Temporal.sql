@@ -1,0 +1,102 @@
+    WITH CTE_VENTAS
+    AS(
+
+    SELECT 
+    VC.EAN
+    ,eC.SKU
+    ,ISNULL(MA.NEW_MARCA, eC.MARCA) AS "MARCA"
+    ,sem.N_SEM
+    ,SEM.ANO
+    ,0 AS "STOCK_FINAL"
+    ,0 AS "STOCK_CD_COM"
+    ,Sum(VC.CANT) AS "CANT_VENDIDAS"
+
+
+    FROM dbo.DWH_Ventas AS VC
+    LEFT JOIN dbo.eCAT_FALA AS eC ON VC.EAN = eC.UPC
+    LEFT JOIN dbo.MONITOREO AS M ON eC.MODELO = M.MODELO
+    LEFT JOIN dbo.TIENDAS AS T ON VC.NUM_LOCAL = T.CODIGO
+    LEFT JOIN dbo.MARCA AS MA ON eC.MARCA = MA.MARCA_BD	
+    LEFT JOIN dbo.SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,VC.FECHA),CAST(VC.FECHA as date)) = SEM.DIA_INICIO
+
+
+    WHERE VC.FECHA between convert(date,DATEADD(day,-(7*(100)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+
+    GROUP BY 
+    VC.EAN
+    ,eC.SKU
+    ,ISNULL(MA.NEW_MARCA, eC.MARCA)
+    ,sem.N_SEM
+    ,SEM.ANO
+
+    UNION
+
+    SELECT 
+    ST.EAN
+    ,eC.SKU
+    ,ISNULL(MA.NEW_MARCA, eC.MARCA) AS "MARCA"
+    ,sem.N_SEM
+    ,sem.ANO 
+    ,SUM(ST.CANT) AS "STOCK_FINAL"
+    ,0 AS "STOCK_CD_COM"
+    ,0 AS "CANT_VENDIDAS"
+
+    FROM dbo.DWH_Stock AS ST
+
+    LEFT JOIN dbo.eCAT_FALA AS eC ON ST.EAN = eC.UPC
+    LEFT JOIN dbo.MARCA AS MA ON eC.MARCA = MA.MARCA_BD	
+    --LEFT JOIN DWH_INCO.[dbo].SEMANAS AS SEM ON ST.Sem_Comercial = SEM.N_SEM AND DATEPART(YEAR,DATEADD(day,-3,ST.Stock_A)) = SEM.AÑO
+    LEFT JOIN dbo.SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,ST.FECHA),CAST(ST.FECHA as date)) = SEM.DIA_INICIO	
+
+    WHERE ST.FECHA between convert(date,DATEADD(day,-(7*(1)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+
+    GROUP BY ST.EAN, eC.SKU,ISNULL(MA.NEW_MARCA, eC.MARCA), sem.N_SEM,sem.ANO
+
+    UNION
+
+    SELECT 
+    ST.EAN
+    ,eC.SKU
+    ,ISNULL(MA.NEW_MARCA, eC.MARCA) AS "MARCA"
+    ,sem.N_SEM
+    ,sem.ANO 
+    ,0 AS "STOCK_FINAL"
+    ,SUM(ST.CANT) AS "STOCK_CD_COM"
+    ,0 AS "CANT_VENDIDAS"
+
+    FROM dbo.DWH_Stock AS ST
+
+    LEFT JOIN dbo.SEMANAS AS SEM ON DATEADD(day,1 -DATEPART(WEEKDAY,ST.FECHA),CAST(ST.FECHA as date)) = SEM.DIA_INICIO
+    LEFT JOIN dbo.eCAT_FALA AS eC ON ST.EAN = eC.UPC
+    LEFT JOIN dbo.MARCA AS MA ON eC.MARCA = MA.MARCA_BD	
+    WHERE ST.NUM_LOCAL in (2000,9903) and ST.FECHA between convert(date,DATEADD(day,-(7*(1)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE()))) and convert(date,DATEADD(day,-(7*(0)),DATEADD(day,-(DATEPART(dw, GETDATE())-2), GETDATE())))
+    GROUP BY ST.EAN, eC.SKU,ISNULL(MA.NEW_MARCA, eC.MARCA), sem.N_SEM,sem.ANO
+
+    )
+
+    Select
+
+    Cast(CVT.EAN as Bigint) as "EAN"
+    ,CVT.SKU
+    ,CVT.MARCA
+    ,CVT.N_SEM
+    ,CVT.ANO
+    ,FVE.FECHA_INI
+    ,SUM (CVT.STOCK_FINAL) as "CVT.STOCK_FINAL" 
+    ,SUM (CVT.STOCK_CD_COM) as "CVT.STOCK_CD_COM"
+    ,sum (CVT.CANT_VENDIDAS) as "CVT.CANT_VENDIDAS"
+
+    From CTE_VENTAS as CVT
+
+    LEFT JOIN (
+                SELECT VV.EAN,MIN(VV.FECHA) AS "FECHA_INI" 
+                FROM dbo.DWH_Ventas AS VV 
+                GROUP BY VV.EAN) AS FVE ON CVT.EAN = FVE.EAN
+
+    GROUP BY
+    Cast(CVT.EAN as Bigint)
+    ,CVT.SKU
+    ,CVT.MARCA
+    ,CVT.N_SEM
+    ,CVT.ANO
+    ,FVE.FECHA_INI

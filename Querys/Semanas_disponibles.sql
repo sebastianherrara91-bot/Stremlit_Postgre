@@ -1,6 +1,7 @@
 WITH RangoVentas AS (
     SELECT MIN(fecha) as min_fecha, MAX(fecha) as max_fecha
     FROM dbo.dwh_ventas
+    WHERE ini_cliente = :ini_cliente
 )
 SELECT DISTINCT
     to_char(SEM.dia_fin, 'YYYY-MM-DD') || ' Sem ' || to_char(SEM.n_sem, 'FM00') AS "SemanaFormateada",
